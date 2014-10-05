@@ -19,6 +19,14 @@ UNKNOWN = 4
 USER_EXISTED = 5
 
 
+def extract_get(store, args):
+    return (store.get(arg) for arg in args)
+
+
+def extract_array(store, args):
+    return (store[arg] for arg in args)
+
+
 @app.route("/", methods=['GET', 'POST'])
 def tester():
     tml = "test.html"
@@ -29,10 +37,8 @@ def tester():
 def forum_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    json = request.json
-    name = json['name']
-    short_name = json['short_name']
-    email = json['user']
+    args = ['name', 'short_name', 'user']
+    name, short_name, email = extract_array(request.json, args)
 
     user_id = get_user_by_email(cursor, email)
     if user_id is None:
@@ -47,10 +53,11 @@ def forum_create():
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
 def forum_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    related = request.args.get('related')
-    short_name = request.args.get('forum')
 
-    forum = get_forum_by_shortname(cursor, short_name)
+    args = ['related', 'forum']
+    related, short_name = extract_get(request.args, args)
+
+    forum = get_forum_by_shortname(cursor, short_name, related)
     if forum is None:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
 
@@ -68,18 +75,14 @@ def forum_details():
 def forum_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    short_name = request.args.get('forum')
-    since = request.args.get('since')
-    limit = request.args.get('limit')
-    sort = request.args.get('sort')
-    order = request.args.get('order')
-    related = request.args.get('related')
+    args = ['forum', 'since', 'limit', 'sort', 'order', 'related']
+    short_name, since, limit, sort, order, related = extract_get(request.args, args)
 
     forum = get_forum_by_shortname(cursor, short_name)
     if forum is None:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
 
-    posts = get_forum_posts(cursor, forum['id'])
+    posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
 
     return jsonify({'code': OK, 'response': posts})
 

@@ -11,7 +11,14 @@ class MySQLCursorDict(MySQLCursor):
         return None
 
 
+def optional(arg, true, false=''):
+    if not arg is None:
+        return true % arg
+    return false
+
+
 # queries
+
 
 def set_forum(cursor, name, short_name, user_id):
     query = '''INSERT INTO `Forum`
@@ -44,14 +51,16 @@ def get_forum_by_shortname(cursor, short_name):
     return cursor.fetchone()
 
 
-def get_forum_posts(cursor, forum_id):
+def get_forum_posts(cursor, forum_id, since, limit, sort, order):
+    since = optional(since, " AND `date` > '%s'")
+    limit = optional(limit, "LIMIT %d")
+    order = optional(order, "ORDER BY `date` %s", "ORDER BY `date` DESC")
+
     query = '''SELECT `id`, `date`, `message`, `parent`,
-                      `isApproved`, `isDeleted`,`isEdited`, `isHighlighted`, `isSpam`,
-                      `User`.`email`
+                      `isApproved`, `isDeleted`,`isEdited`, `isHighlighted`, `isSpam`
                FROM `Post`
-               JOIN `Forum` ON `forum` = `Forum`.`id`
-               JOIN `User` ON `user` = `User`.`id`
-               WHERE `forum` = '%d';''' % forum_id
+               WHERE `forum` = '%d' %s %s %s;''' % (forum_id, since, order, limit)
+
     cursor.execute(query)
     return cursor.fetchall()
 

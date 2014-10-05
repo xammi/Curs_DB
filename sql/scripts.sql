@@ -12,4 +12,5 @@ JOIN `User` ON `user` = `User`.`id`
 WHERE `forum` = 2;
 
 INSERT INTO `Forum` (`name`, `short_name`, `user_id`) 
-VALUES ('people', 'peo', 5);
+VALUES ('chicks', 'chicks', 1);
+
