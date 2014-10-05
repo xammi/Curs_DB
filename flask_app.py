@@ -1,8 +1,9 @@
 #! coding: utf-8 -*-
 
 from flask import Flask
-from flask import request, redirect, render_template, jsonify
+from flask import request, render_template, jsonify
 import mysql.connector
+from sql_utils import *
 
 app = Flask(__name__)
 connect = mysql.connector.connect(user='root', password='22061994',
@@ -26,62 +27,61 @@ def tester():
 
 @app.route(API_PREFIX + "/forum/create/", methods=['POST'])
 def forum_create():
-    cursor = connect.cursor()
-    json = request.json
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
+    json = request.json
     name = json['name']
     short_name = json['short_name']
-    user = json['user']
+    email = json['user']
 
-    query = '''SELECT `id` FROM `User` WHERE `email` = '%s';''' % user
-    cursor.execute(query)
-    user_id = cursor.fetchone()
+    user_id = get_user_by_email(cursor, email)
     if user_id is None:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
 
-    query = '''INSERT INTO `Forum` (`name`, `short_name`, `user_id`)
-               VALUES ('%s', '%s', %d);''' % (name, short_name, user_id)
-    cursor.execute(query)
+    set_forum(cursor, name, short_name, user_id)
 
-    return jsonify({'code': OK, 'response':
-                   {'id': user_id, 'name': name, 'short_name': short_name, 'user': user, }})
+    response = {'id': user_id, 'name': name, 'short_name': short_name, 'user': email}
+    return jsonify({'code': OK, 'response': response})
 
 
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
 def forum_details():
-    cursor = connect.cursor()
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
     related = request.args.get('related')
     short_name = request.args.get('forum')
 
-    query = '''SELECT `id`, `name`, `short_name`, `user_id`
-               FROM `Forum`
-               WHERE `short_name` = '%s'
-               LIMIT 1;''' % short_name
-    cursor.execute(query)
-
-    forum = cursor.fetchone()
+    forum = get_forum_by_shortname(cursor, short_name)
     if forum is None:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
 
-    if related != '':
-        user_id = forum[3]
-        query = '''SELECT `id`, `username`, `about`, `name`, `email`, `isAnonymous`
-                   FROM `User`
-                   WHERE `id` = %d
-                   LIMIT 1;''' % user_id
-        cursor.execute(query)
-
-        user = cursor.fetchone()
+    if related == 'user':
+        user = get_user_by_id(cursor, forum['user_id'])
         if user is None:
             return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
 
-        return jsonify({'code': OK, 'response':
-                       {'id': forum[0], 'name': forum[1], 'short_name': forum[2], 'user':
-                       {'about': user[2], 'email': user[4], 'followers': [], 'following': [], 'id': user[0],
-                        'isAnonymous': user[5], 'name': user[3], 'subscriptions': [], 'username': user[1]}}})
-    else:
-        return jsonify({'code': OK, 'response':
-                       {'id': forum[0], 'name': forum[1], 'short_name': forum[2]}})
+        forum.update({'user': user})
+
+    return jsonify({'code': OK, 'response': forum})
+
+
+@app.route(API_PREFIX + "/forum/listPosts/", methods=['GET'])
+def forum_posts():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
+    short_name = request.args.get('forum')
+    since = request.args.get('since')
+    limit = request.args.get('limit')
+    sort = request.args.get('sort')
+    order = request.args.get('order')
+    related = request.args.get('related')
+
+    forum = get_forum_by_shortname(cursor, short_name)
+    if forum is None:
+        return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
+
+    posts = get_forum_posts(cursor, forum['id'])
+
+    return jsonify({'code': OK, 'response': posts})
 
 
 if __name__ == "__main__":
