@@ -1,16 +1,15 @@
 USE `forum_db`;
 
-SELECT `id` FROM `User` WHERE `email` = 'ex@ex.ru';
-SELECT * FROM Forum;
+SELECT * FROM `Forum`;
+SELECT * FROM `User`;
+SELECT * FROM `Thread`;
+SELECT * FROM `Post`;
 
-SELECT `id`, `date`, `message`, `parent`, 
-`isApproved`, `isDeleted`,`isEdited`, `isHighlighted`, `isSpam`,
-`User`.`email`
-FROM `Post` 
-JOIN `Forum` ON `forum` = `Forum`.`id`
-JOIN `User` ON `user` = `User`.`id`
-WHERE `forum` = 2;
+INSERT INTO `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`)
+VALUES (5, 'Python', 1, '2014-01-01', 'Python language', 'python');
 
-INSERT INTO `Forum` (`name`, `short_name`, `user_id`) 
-VALUES ('chicks', 'chicks', 1);
+INSERT INTO `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`)
+VALUES (5, 'C++', 1, '2014-01-01', 'C++ language', 'cpp');
 
+INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`)
+VALUES ('2014-01-01', 2, 'Template metaprogramming', 1, 5);

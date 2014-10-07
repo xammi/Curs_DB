@@ -40,14 +40,16 @@ def forum_create():
     args = ['name', 'short_name', 'user']
     name, short_name, email = extract_array(request.json, args)
 
-    user_id = get_user_by_email(cursor, email)
-    if user_id is None:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
+    try:
+        user = get_user_by_email(cursor, email)
+        user_id = user['id']
+        set_forum(cursor, name, short_name, user_id)
 
-    set_forum(cursor, name, short_name, user_id)
+        response = {'id': user_id, 'name': name, 'short_name': short_name, 'user': email}
+        return jsonify({'code': OK, 'response': response})
 
-    response = {'id': user_id, 'name': name, 'short_name': short_name, 'user': email}
-    return jsonify({'code': OK, 'response': response})
+    except NotFound as e:
+        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
 
 
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
@@ -57,18 +59,17 @@ def forum_details():
     args = ['related', 'forum']
     related, short_name = extract_get(request.args, args)
 
-    forum = get_forum_by_shortname(cursor, short_name, related)
-    if forum is None:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
+    related = optional(related, [])
 
-    if related == 'user':
-        user = get_user_by_id(cursor, forum['user_id'])
-        if user is None:
-            return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
+    try:
+        forum = get_forum_by_shortname(cursor, short_name)
+        if 'user' in related:
+            user = get_user_by_id(cursor, forum['user_id'])
+            forum.update({'user': user})
 
-        forum.update({'user': user})
-
-    return jsonify({'code': OK, 'response': forum})
+        return jsonify({'code': OK, 'response': forum})
+    except NotFound as e:
+        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
 
 
 @app.route(API_PREFIX + "/forum/listPosts/", methods=['GET'])
@@ -78,14 +79,26 @@ def forum_posts():
     args = ['forum', 'since', 'limit', 'sort', 'order', 'related']
     short_name, since, limit, sort, order, related = extract_get(request.args, args)
 
-    forum = get_forum_by_shortname(cursor, short_name)
-    if forum is None:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': None})
+    related = optional(related, [])
 
-    posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
+    try:
+        forum = get_forum_by_shortname(cursor, short_name)
+        posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
 
-    return jsonify({'code': OK, 'response': posts})
+        for post in posts:
+            user = get_user_by_id(cursor, post['user'])
 
+            post['user'] = user['email']
+            if 'user' in related:
+                post['user'] = user
+
+            if 'forum' in related:
+                post.update({'forum': forum})
+
+        return jsonify({'code': OK, 'response': posts})
+
+    except NotFound as e:
+        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
 
 if __name__ == "__main__":
     app.debug = True

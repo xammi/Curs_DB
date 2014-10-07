@@ -11,11 +11,15 @@ class MySQLCursorDict(MySQLCursor):
         return None
 
 
-def optional(arg, true, false=''):
-    if not arg is None:
-        return true % arg
-    return false
+class NotFound(Exception):
+    def __init__(self, msg):
+        self.msg = msg
 
+
+def optional(obj, default):
+    if obj is None or obj == '':
+        return default
+    return obj
 
 # queries
 
@@ -33,33 +37,57 @@ def get_user_by_id(cursor, user_id):
                WHERE `id` = %d
                LIMIT 1;''' % user_id
     cursor.execute(query)
-    return cursor.fetchone()
+
+    user = cursor.fetchone()
+    if user is None:
+        raise NotFound("User with the '%d' id is not found" % user_id)
+
+    return user
 
 
 def get_user_by_email(cursor, email):
+    email = optional(email, 'no_name@no_host.com')
+
     query = '''SELECT `id` FROM `User` WHERE `email` = '%s';''' % email
     cursor.execute(query)
-    return cursor.fetchone()
+
+    user = cursor.fetchone()
+    if user is None:
+        raise NotFound("User with the '%s' email is not found" % email)
+
+    return user
 
 
 def get_forum_by_shortname(cursor, short_name):
+    short_name = optional(short_name, 'no_name')
+
     query = '''SELECT `id`, `name`, `short_name`, `user_id`
                FROM `Forum`
                WHERE `short_name` = '%s'
                LIMIT 1;''' % short_name
     cursor.execute(query)
-    return cursor.fetchone()
+
+    forum = cursor.fetchone()
+    if forum is None:
+        raise NotFound("Forum with the '%s' short_name is not found" % short_name)
+
+    return forum
 
 
 def get_forum_posts(cursor, forum_id, since, limit, sort, order):
-    since = optional(since, " AND `date` > '%s'")
-    limit = optional(limit, "LIMIT %d")
-    order = optional(order, "ORDER BY `date` %s", "ORDER BY `date` DESC")
+    since = optional(since, '2000-01-01')
+    order = optional(order, 'DESC')
+    limit = optional(limit, '')
 
-    query = '''SELECT `id`, `date`, `message`, `parent`,
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT `id`, `date`, `message`, `parent`, `user`,
                       `isApproved`, `isDeleted`,`isEdited`, `isHighlighted`, `isSpam`
                FROM `Post`
-               WHERE `forum` = '%d' %s %s %s;''' % (forum_id, since, order, limit)
+               WHERE `forum` = '%d' AND `date` > '%s'
+               ORDER BY `date` %s
+               %s;''' % (forum_id, since, order, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
