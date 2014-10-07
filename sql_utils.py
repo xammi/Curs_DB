@@ -92,3 +92,20 @@ def get_forum_posts(cursor, forum_id, since, limit, sort, order):
     cursor.execute(query)
     return cursor.fetchall()
 
+
+def get_forum_threads(cursor, forum_id, since, limit, order):
+    since = optional(since, '2000-01-01')
+    order = optional(order, 'DESC')
+    limit = optional(limit, '')
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT `id`, `date`, `message`, `user`
+               FROM `Thread`
+               WHERE `forum` = '%d' AND `date` > '%s'
+               ORDER BY `date` %s
+               %s;''' % (forum_id, since, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()

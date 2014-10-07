@@ -18,13 +18,16 @@ UNCORRECT_QUERY = 3
 UNKNOWN = 4
 USER_EXISTED = 5
 
+# QUES?
+# Нужно ли хранить внешние ключи как id или как строки
+# Можно ли делать повторные запросы или нужно сделать за один
 
-def extract_get(store, args):
-    return (store.get(arg) for arg in args)
 
-
-def extract_array(store, args):
-    return (store[arg] for arg in args)
+def extract(store, args):
+    if hasattr(store, 'get'):
+        return (store.get(arg) for arg in args)
+    if hasattr(store, '__getitem__'):
+        return (store[arg] for arg in args)
 
 
 @app.route("/", methods=['GET', 'POST'])
@@ -38,7 +41,7 @@ def forum_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     args = ['name', 'short_name', 'user']
-    name, short_name, email = extract_array(request.json, args)
+    name, short_name, email = extract(request.json, args)
 
     try:
         user = get_user_by_email(cursor, email)
@@ -57,7 +60,7 @@ def forum_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     args = ['related', 'forum']
-    related, short_name = extract_get(request.args, args)
+    related, short_name = extract(request.args, args)
 
     related = optional(related, [])
 
@@ -72,12 +75,13 @@ def forum_details():
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
 
 
+# DEBUG
 @app.route(API_PREFIX + "/forum/listPosts/", methods=['GET'])
 def forum_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     args = ['forum', 'since', 'limit', 'sort', 'order', 'related']
-    short_name, since, limit, sort, order, related = extract_get(request.args, args)
+    short_name, since, limit, sort, order, related = extract(request.args, args)
 
     related = optional(related, [])
 
@@ -99,6 +103,281 @@ def forum_posts():
 
     except NotFound as e:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
+
+
+# DEBUG
+@app.route(API_PREFIX + "/forum/listThreads/", methods=["GET"])
+def forum_threads():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
+    args = ['forum', 'since', 'limit', 'order', 'related']
+    short_name, since, limit, order, related = extract(request.args, args)
+
+    related = optional(related, [])
+    try:
+        forum = get_forum_by_shortname(cursor, short_name)
+        threads = get_forum_threads(cursor, forum['id'])
+
+        for thread in threads:
+            user = get_user_by_id(thread['user'])
+
+            thread['user'] = user['email']
+            if 'user' in related:
+                thread['user'] = user
+
+            if 'forum' in related:
+                thread['forum'] = forum
+
+        return jsonify({'code': OK, 'response': threads})
+
+    except NotFound as e:
+        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
+
+
+# BUILD
+@app.route(API_PREFIX + "/forum/listUsers/", methods=["GET"])
+def forum_users():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['forum', 'limit', 'order', 'since_id']
+    short_name, limit, order, since_id = extract(args)
+
+
+#--------------------------------------------------------------------------------------------------
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/create/", methods=["POST"])
+def post_create():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
+    req_args = ['date', 'thread', 'message', 'user', 'forum']
+    date, thread, message, user, forum = extract(request.json, req_args)
+    opt_args = ['parent', 'isApproved', 'isHighlighted', 'isEdited', 'isSpam', 'isDeleted']
+    parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted = extract(request.args, opt_args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/details/", methods=["GET"])
+def post_details():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['post', 'related']
+    post, related = extract(request.args, args)
+
+    related = optional(related, [])
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/list/", methods=["GET"])
+def post_list():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['forum', 'thread', 'since', 'limit', 'sort', 'order']
+    short_name, thread, since, limit, sort, order = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/remove/", methods=["POST"])
+def post_remove():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['post']
+    post = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/restore/", methods=["POST"])
+def post_restore():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['post']
+    post = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/update/", methods=["POST"])
+def post_update():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['post', 'message']
+    post, message = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/post/vote/", methods=["POST"])
+def post_vote():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['post', 'vote']
+    post, vote = extract(request.json, args)
+
+
+#--------------------------------------------------------------------------------------------------
+
+# BUILD
+@app.route(API_PREFIX + "/user/create/", methods=["POST"])
+def user_create():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['username', 'about', 'name', 'email', 'isAnonymous']
+    username, about, name, email, isAnonymous = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/details/", methods=["GET"])
+def user_details():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user']
+    user = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/follow/", methods=["POST"])
+def user_follow():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['follower', 'followee']
+    follower, followee = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/listFollowers/", methods=["GET"])
+def user_list_followers():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user', 'limit', 'order', 'since_id']
+    user, limit, order, since_id = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/listFollowing/", methods=["GET"])
+def user_list_following():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user', 'limit', 'order', 'since_id']
+    user, limit, order, since_id = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/listPosts/", methods=["GET"])
+def user_list_posts():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user', 'since', 'limit', 'sort', 'order']
+    user, since, limit, sort, order = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/unfollow/", methods=["POST"])
+def user_unfollow():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['follower', 'followee']
+    follower, followee = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/user/updateProfile/", methods=["POST"])
+def user_update_profile():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['about', 'user', 'name']
+    about, user, name = extract(request.json, args)
+
+
+#--------------------------------------------------------------------------------------------------
+
+# BUILD
+@app.route(API_PREFIX + "/thread/close/", methods=["POST"])
+def thread_close():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread']
+    thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/create/", methods=["POST"])
+def thread_create():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
+    req_args = ['forum', 'title', 'isClosed', 'user', 'date', 'message', 'slug']
+    forum, title, isClosed, user, date, message, slug = extract(request.json, req_args)
+    opt_args = ['isDeleted']
+    isDeleted = extract(request.json, opt_args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/details/", methods=["GET"])
+def thread_details():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread', 'related']
+    thread, related = extract(request.args, args)
+
+    related = optional(related, [])
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/list/", methods=["GET"])
+def thread_list():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
+    req_args = ['user', 'forum']
+    user, forum = extract(request.args, req_args)
+    opt_args = ['since', 'limit', 'order']
+    since, limit, order = extract(request.args, opt_args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/listPosts/", methods=["GET"])
+def thread_list_posts():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread', 'since', 'limit', 'sort', 'order']
+    thread, since, limit, sort, order = extract(request.args, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/open/", methods=["POST"])
+def thread_open():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread']
+    thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/remove/", methods=["POST"])
+def thread_remove():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread']
+    thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/restore/", methods=["POST"])
+def thread_restore():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['thread']
+    thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/subscribe/", methods=["POST"])
+def thread_subscribe():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user', 'thread']
+    user, thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/unsubscribe/", methods=["POST"])
+def thread_unsubscribe():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['user', 'thread']
+    user, thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/update/", methods=["POST"])
+def thread_update():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['message', 'slug', 'thread']
+    message, slug, thread = extract(request.json, args)
+
+
+# BUILD
+@app.route(API_PREFIX + "/thread/vote/", methods=["POST"])
+def thread_vote():
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    args = ['vote', 'thread']
+    vote, thread = extract(request.json, args)
+
+#--------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     app.debug = True
