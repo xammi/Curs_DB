@@ -13,3 +13,7 @@ VALUES (5, 'C++', 1, '2014-01-01', 'C++ language', 'cpp');
 
 INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`)
 VALUES ('2014-01-01', 2, 'Template metaprogramming', 1, 5);
+
+UPDATE `Post`
+SET `isDeleted` = True
+WHERE `id` = 0;

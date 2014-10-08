@@ -41,6 +41,9 @@ CREATE TABLE `Post`(
 	`user` INT NOT NULL,
 	`forum` INT NOT NULL,
 
+    `dislikes` INT NOT NULL DEFAULT 0,
+    `likes` INT NOT NULL DEFAULT 0,
+
 	`parent` INT DEFAULT NULL,
 	`isHighlighted` BOOL NOT NULL DEFAULT False,
 	`isApproved` BOOL NOT NULL DEFAULT False,
