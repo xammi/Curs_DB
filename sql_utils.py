@@ -11,7 +11,12 @@ class MySQLCursorDict(MySQLCursor):
         return None
 
 
-class NotFound(Exception):
+class DBException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+class NotFound(DBException):
     def __init__(self, message):
         self.message = message
 
@@ -24,31 +29,19 @@ def optional(obj, default):
 # queries
 
 
-def set_forum(cursor, name, short_name, user_id):
+def set_forum(cursor, name, slug, user):
     query = '''INSERT INTO `Forum`
-               (`name`, `short_name`, `user_id`)
-               VALUES ('%s', '%s', %d);''' % (name, short_name, user_id)
+               (`name`, `slug`, `founder`)
+               VALUES ('%s', '%s', '%s');''' % (name, slug, user)
     cursor.execute(query)
-
-
-def get_user_by_id(cursor, user_id):
-    query = '''SELECT `id`, `username`, `about`, `name`, `email`, `isAnonymous`
-               FROM `User`
-               WHERE `id` = %d
-               LIMIT 1;''' % user_id
-    cursor.execute(query)
-
-    user = cursor.fetchone()
-    if user is None:
-        raise NotFound("User with the '%d' id is not found" % user_id)
-
-    return user
 
 
 def get_user_by_email(cursor, email):
     email = optional(email, 'no_name@no_host.com')
 
-    query = '''SELECT `id` FROM `User` WHERE `email` = '%s';''' % email
+    query = '''SELECT `id`, `username`, `about`, `name`, `email`
+               FROM `User`
+               WHERE `email` = '%s';''' % email
     cursor.execute(query)
 
     user = cursor.fetchone()
@@ -58,18 +51,18 @@ def get_user_by_email(cursor, email):
     return user
 
 
-def get_forum_by_shortname(cursor, short_name):
-    short_name = optional(short_name, 'no_name')
+def get_forum_by_slug(cursor, slug):
+    slug = optional(slug, 'no_name')
 
-    query = '''SELECT `id`, `name`, `short_name`, `user_id`
+    query = '''SELECT `id`, `name`, `slug`, `founder`
                FROM `Forum`
-               WHERE `short_name` = '%s'
-               LIMIT 1;''' % short_name
+               WHERE `slug` = '%s'
+               LIMIT 1;''' % slug
     cursor.execute(query)
 
     forum = cursor.fetchone()
     if forum is None:
-        raise NotFound("Forum with the '%s' short_name is not found" % short_name)
+        raise NotFound("Forum with the '%s' short_name is not found" % slug)
 
     return forum
 

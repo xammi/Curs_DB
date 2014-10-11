@@ -4,79 +4,81 @@ USE forum_db;
 
 CREATE TABLE `User`(
 	`id` INT NOT NULL AUTO_INCREMENT,
-	`username` NVARCHAR (20) NOT NULL UNIQUE,
-	`about` TEXT NOT NULL,
-	`name` NVARCHAR (20) NOT NULL,
-	`email` VARCHAR (30) NOT NULL UNIQUE,
+	`username` NVARCHAR (50) NOT NULL,
+    `email` VARCHAR (50) NOT NULL,
 
+	`about` TEXT NOT NULL DEFAULT '',
+	`name` NVARCHAR (50) NOT NULL,
 	`isAnonymous` BOOL NOT NULL DEFAULT False,
 
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+    UNIQUE KEY USING HASH (`username`),
+    UNIQUE KEY USING HASH (`email`)
 );
-
-ALTER TABLE `User`
-	ADD INDEX (`username`),
-	ADD INDEX (`email`);
 
 
 CREATE TABLE `Forum`(
 	`id` INT NOT NULL AUTO_INCREMENT,
+    `slug` VARCHAR (50) NOT NULL,
+    `founder` VARCHAR (50) NOT NULL,
 	`name` NVARCHAR (50) NOT NULL,
-	`short_name` NVARCHAR (15) NOT NULL UNIQUE,
-	`user_id` INT NOT NULL,
 
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+    UNIQUE KEY USING HASH (`slug`),
+    KEY USING HASH (`founder`),
+    CONSTRAINT FOREIGN KEY (`founder`) REFERENCES `User` (`email`)
 );
 
-ALTER TABLE `Forum`
-	ADD INDEX (`user_id`),
-	ADD CONSTRAINT FOREIGN KEY (`user_id`) REFERENCES `User` (`id`);
 
+CREATE TABLE `Thread` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `forum` VARCHAR (50) NOT NULL,
+    `author` VARCHAR (50) NOT NULL,
+    
+    `title` NVARCHAR (50) NOT NULL,
+    `date` DATETIME NOT NULL,
+    `message` TEXT NOT NULL,
+    `slug` VARCHAR (50) NOT NULL,
 
-CREATE TABLE `Post`(
-	`id` INT NOT NULL AUTO_INCREMENT,	
-	`date` DATETIME NOT NULL,
-	`thread` INT NOT NULL,
-	`message` TEXT NOT NULL,
-	`user` INT NOT NULL,
-	`forum` INT NOT NULL,
-
+    `isDeleted` BOOL NOT NULL DEFAULT False,
+    `isClosed` BOOL NOT NULL DEFAULT False, 
     `dislikes` INT NOT NULL DEFAULT 0,
     `likes` INT NOT NULL DEFAULT 0,
 
-	`parent` INT DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY USING HASH (`forum`),
+    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`slug`),
+    KEY USING HASH (`author`),
+    CONSTRAINT FOREIGN KEY (`author`) REFERENCES `User` (`email`)
+);
+
+
+CREATE TABLE `Post` (
+	`id` INT NOT NULL AUTO_INCREMENT,	
+    `thread` INT NOT NULL,
+    `author` VARCHAR (50) NOT NULL,
+    `forum` VARCHAR (50) NOT NULL,
+
+    `date` DATETIME NOT NULL,
+    `message` TEXT NOT NULL,
+    `dislikes` INT NOT NULL DEFAULT 0,
+    `likes` INT NOT NULL DEFAULT 0,
+
+	`parent` VARCHAR (50) NOT NULL,
 	`isHighlighted` BOOL NOT NULL DEFAULT False,
 	`isApproved` BOOL NOT NULL DEFAULT False,
 	`isEdited` BOOL NOT NULL DEFAULT False,
 	`isSpam` BOOL NOT NULL DEFAULT False,
 	`isDeleted` BOOL NOT NULL DEFAULT False,
 
-	PRIMARY KEY (`id`)
+	PRIMARY KEY (`id`),
+    UNIQUE KEY (`parent`),
+    KEY USING HASH (`forum`),
+    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`slug`),
+    KEY USING HASH (`author`),
+    CONSTRAINT FOREIGN KEY (`author`) REFERENCES `User` (`email`),
+    KEY (`thread`),
+    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`)
 );
 
-ALTER TABLE `Post`
-	ADD INDEX (`parent`),
-	ADD INDEX (`thread`),
-	ADD CONSTRAINT FOREIGN KEY (`parent`) REFERENCES `Post` (`id`);
-
-
-CREATE TABLE `Thread` (
-	`id` INT NOT NULL AUTO_INCREMENT,
-	`forum` INT NOT NULL,
-	`title` NVARCHAR (50) NOT NULL,
-	`isClosed` BOOL NOT NULL DEFAULT False,
-	`user` INT NOT NULL,
-	`date` DATETIME NOT NULL,
-	`message` TEXT NOT NULL,
-	`slug` VARCHAR (20) NOT NULL,
-
-	`isDeleted` BOOL NOT NULL DEFAULT False,
-
-	PRIMARY KEY (`id`)
-);
-
-ALTER TABLE `Thread`
-	ADD INDEX (`forum`),
-	ADD INDEX (`user`),
-	ADD CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`id`);
 

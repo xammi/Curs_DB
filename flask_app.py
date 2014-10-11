@@ -2,6 +2,7 @@
 
 from flask import Flask
 from flask import request, render_template, jsonify
+from mysql.connector.errors import IntegrityError as IsDuplicate
 import mysql.connector
 from sql_utils import *
 
@@ -18,17 +19,26 @@ UNCORRECT_QUERY = 3
 UNKNOWN = 4
 USER_EXISTED = 5
 
-# QUES?
 # Нужно ли хранить внешние ключи как id или как строки
+# Как строки: индекс в виде HASH | M3
+
 # Можно ли делать повторные запросы или нужно сделать за один
+# Пытаться за один, но можно
+
 # Как работать с иерархическими структурами в mysql
+# Materialized path, конец 2 лекции
 
 
 def extract(store, args):
     if hasattr(store, 'get'):
-        return (store.get(arg) for arg in args)
+        if len(args) == 1:
+            return store.get(args[0])
+        return tuple(store.get(arg) for arg in args)
+
     if hasattr(store, '__getitem__'):
-        return (store[arg] for arg in args)
+        if len(args) == 1:
+            return store.get(args[0])
+        return tuple(store[arg] for arg in args)
 
 
 @app.route("/", methods=['GET', 'POST'])
@@ -42,18 +52,19 @@ def forum_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     args = ['name', 'short_name', 'user']
-    name, short_name, email = extract(request.json, args)
+    name, short_name, user = extract(request.json, args)
 
     try:
-        user = get_user_by_email(cursor, email)
-        user_id = user['id']
-        set_forum(cursor, name, short_name, user_id)
+        set_forum(cursor, name, short_name, user)
+        connect.commit()
 
-        response = {'id': user_id, 'name': name, 'short_name': short_name, 'user': email}
+        response = {'name': name, 'short_name': short_name, 'user': user}
         return jsonify({'code': OK, 'response': response})
 
-    except NotFound as e:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.message})
+    except IsDuplicate as e:
+        return jsonify({'code': UNCORRECT_QUERY, 'response': e.message})
+    except DBException as e:
+        return jsonify({'code': UNKNOWN, 'response': e.message})
 
 
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
@@ -66,14 +77,17 @@ def forum_details():
     related = optional(related, [])
 
     try:
-        forum = get_forum_by_shortname(cursor, short_name)
+        forum = get_forum_by_slug(cursor, short_name)
         if 'user' in related:
-            user = get_user_by_id(cursor, forum['user_id'])
+            user = get_user_by_email(cursor, forum['founder'])
             forum.update({'user': user})
 
         return jsonify({'code': OK, 'response': forum})
+
     except NotFound as e:
         return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.message})
+    except DBException as e:
+        return jsonify({'code': UNKNOWN, 'response': e.message})
 
 
 # DEBUG
@@ -87,7 +101,7 @@ def forum_posts():
     related = optional(related, [])
 
     try:
-        forum = get_forum_by_shortname(cursor, short_name)
+        forum = get_forum_by_slug(cursor, short_name)
         posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
 
         for post in posts:
@@ -116,7 +130,7 @@ def forum_threads():
 
     related = optional(related, [])
     try:
-        forum = get_forum_by_shortname(cursor, short_name)
+        forum = get_forum_by_slug(cursor, short_name)
         threads = get_forum_threads(cursor, forum['id'], since, limit, order)
 
         for thread in threads:
@@ -175,7 +189,6 @@ def post_list():
     short_name, thread, since, limit, sort, order = extract(request.args, args)
 
 
-# DEBUG
 @app.route(API_PREFIX + "/post/remove/", methods=["POST"])
 def post_remove():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
@@ -184,14 +197,14 @@ def post_remove():
 
     try:
         set_post_deleted(cursor, post, 'True')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'post': post}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'post': post, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
 
-
-# DEBUG
 @app.route(API_PREFIX + "/post/restore/", methods=["POST"])
 def post_restore():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
@@ -200,8 +213,10 @@ def post_restore():
 
     try:
         set_post_deleted(cursor, post, 'False')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'post': post}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'post': post, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -215,10 +230,12 @@ def post_update():
 
     try:
         set_post_message(cursor, post, message)
-        post = get_post_by_id(cursor, post)
+        connect.commit()
 
+        post = get_post_by_id(cursor, post)
         return jsonify({'code': OK, 'response': post})
-    except Exception as e:
+
+    except DBException as e:
         response = {'post': post, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -232,10 +249,12 @@ def post_vote():
 
     try:
         set_post_vote(cursor, post, vote)
-        post = get_post_by_id(cursor, post)
+        connect.commit()
 
+        post = get_post_by_id(cursor, post)
         return jsonify({'code': OK, 'response': post})
-    except Exception as e:
+
+    except DBException as e:
         response = {'post': post, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -316,8 +335,10 @@ def thread_close():
 
     try:
         set_thread_closed(cursor, thread, 'True')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'thread': thread}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -371,8 +392,10 @@ def thread_open():
 
     try:
         set_thread_closed(cursor, thread, 'False')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'thread': thread}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -386,8 +409,10 @@ def thread_remove():
 
     try:
         set_thread_deleted(cursor, thread, 'True')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'thread': thread}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -401,8 +426,10 @@ def thread_restore():
 
     try:
         set_thread_deleted(cursor, thread, 'False')
+        connect.commit()
         return jsonify({'code': OK, 'response': {'thread': thread}})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -432,10 +459,12 @@ def thread_update():
 
     try:
         set_thread_message_slug(cursor, thread, message)
-        thread = get_thread_by_id(cursor, thread)
+        connect.commit()
 
+        thread = get_thread_by_id(cursor, thread)
         return jsonify({'code': OK, 'response': thread})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
@@ -449,10 +478,12 @@ def thread_vote():
 
     try:
         set_thread_vote(cursor, thread, vote)
-        thread = get_thread_by_id(cursor, thread)
+        connect.commit()
 
+        thread = get_thread_by_id(cursor, thread)
         return jsonify({'code': OK, 'response': thread})
-    except Exception as e:
+
+    except DBException as e:
         response = {'thread': thread, 'message': e.message}
         return jsonify({'code': UNKNOWN, 'response': response})
 
