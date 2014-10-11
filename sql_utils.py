@@ -109,7 +109,7 @@ def get_forum_threads(cursor, forum_id, since, limit, order):
 def get_post_by_id(cursor, post_id):
     query = '''SELECT `date`, `dislikes`, `forum`, `id`,
                       `isApproved`, `isDeleted`, `isEdited`, `isHighlighted`, `isSpam`,
-                      `likes`, `message`, `parent`, `points`, `thread`, `user`
+                      `likes`, `message`, `parent`, `thread`, `author`
                FROM `Post`
                WHERE `id` = %d
                LIMIT 1;''' % post_id
@@ -132,7 +132,7 @@ def set_post_deleted(cursor, post, logical):
 
 def set_post_message(cursor, post, message):
     query = '''UPDATE `Post`
-               SET `message` = %s
+               SET `message` = '%s'
                WHERE `id` = %d;''' % (message, post)
 
     cursor.execute(query)
@@ -189,7 +189,7 @@ def set_thread_deleted(cursor, thread, logical):
 
 def set_thread_message_slug(cursor, thread, message, slug):
     query = '''UPDATE `Thread`
-               SET `message` = %s, `slug` = %s
+               SET `message` = '%s', `slug` = '%s'
                WHERE `id` = %d;''' % (message, slug, thread)
 
     cursor.execute(query)

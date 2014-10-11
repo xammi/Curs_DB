@@ -221,7 +221,6 @@ def post_restore():
         return jsonify({'code': UNKNOWN, 'response': response})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/post/update/", methods=["POST"])
 def post_update():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)

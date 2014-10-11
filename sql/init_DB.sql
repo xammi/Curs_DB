@@ -28,5 +28,13 @@ VALUES ('progs', 'Python', 'xammi@yandex.ru', '2014-01-01', 'Python language', '
 INSERT INTO `Thread` (`forum`, `title`, `author`, `date`, `message`, `slug`)
 VALUES ('progs', 'C++', 'eugene@mail.ru', '2014-01-02', 'C++ language', 'cpp');
 
+INSERT INTO `Thread` (`forum`, `title`, `author`, `date`, `message`, `slug`)
+VALUES ('toys', 'Civilization', 'eugene@mail.ru', '2014-01-02', 'Sid Meyers Civilization', 'civ');
+
+#--------------------------------------------------------------------------------------------------
+
 INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
 VALUES ('2014-01-03', 1, 'Template metaprogramming', 'xammi@yandex.ru', 'progs');
+
+INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
+VALUES ('2014-01-03', 1, 'Unit', 'eugene@mail.ru', 'toys');

@@ -64,7 +64,7 @@ CREATE TABLE `Post` (
     `dislikes` INT NOT NULL DEFAULT 0,
     `likes` INT NOT NULL DEFAULT 0,
 
-	`parent` VARCHAR (50) NOT NULL,
+	`parent` VARCHAR (50),
 	`isHighlighted` BOOL NOT NULL DEFAULT False,
 	`isApproved` BOOL NOT NULL DEFAULT False,
 	`isEdited` BOOL NOT NULL DEFAULT False,
@@ -72,7 +72,7 @@ CREATE TABLE `Post` (
 	`isDeleted` BOOL NOT NULL DEFAULT False,
 
 	PRIMARY KEY (`id`),
-    UNIQUE KEY (`parent`),
+    KEY (`parent`),
     KEY USING HASH (`forum`),
     CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`slug`),
     KEY USING HASH (`author`),
