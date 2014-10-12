@@ -3,6 +3,12 @@ __author__ = 'max'
 from mysql.connector.cursor import MySQLCursor
 
 
+def optional(obj, default):
+    if obj is None or obj == '':
+        return default
+    return obj
+
+
 class MySQLCursorDict(MySQLCursor):
     def _row_to_python(self, rowdata, desc=None):
         row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
@@ -13,18 +19,18 @@ class MySQLCursorDict(MySQLCursor):
 
 class DBException(Exception):
     def __init__(self, message):
-        self.message = message
+        self.msg = message
 
 
 class NotFound(DBException):
     def __init__(self, message):
-        self.message = message
+        self.msg = message
 
 
-def optional(obj, default):
-    if obj is None or obj == '':
-        return default
-    return obj
+class RequiredNone(DBException):
+    def __init__(self, arg):
+        self.msg = 'Required parameter (%s) not found' % arg
+
 
 # queries
 
@@ -34,21 +40,6 @@ def set_forum(cursor, name, slug, user):
                (`name`, `slug`, `founder`)
                VALUES ('%s', '%s', '%s');''' % (name, slug, user)
     cursor.execute(query)
-
-
-def get_user_by_email(cursor, email):
-    email = optional(email, 'no_name@no_host.com')
-
-    query = '''SELECT `id`, `username`, `about`, `name`, `email`
-               FROM `User`
-               WHERE `email` = '%s';''' % email
-    cursor.execute(query)
-
-    user = cursor.fetchone()
-    if user is None:
-        raise NotFound("User with the '%s' email is not found" % email)
-
-    return user
 
 
 def get_forum_by_slug(cursor, slug):
@@ -122,6 +113,28 @@ def get_post_by_id(cursor, post_id):
     return post
 
 
+def set_post(cursor, date, thread, message, user, forum):
+    query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
+               VALUES ('%s', %d, '%s', '%s', '%s');''' % (date, thread, message, user, forum)
+    cursor.execute(query)
+
+
+def set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted):
+    parent = optional(parent, 'NULL')
+    is_approved = optional(is_approved, 'false')
+    is_highlighted = optional(is_highlighted, 'false')
+    is_edited = optional(is_edited, 'false')
+    is_spam = optional(is_spam, 'false')
+    is_deleted = optional(is_deleted, 'false')
+
+    query = '''UPDATE `Post`
+               SET `parent` = %s, `isApproved` = %s, `isHighlighted` = %s,
+                   `isEdited` = %s, `isSpam` = %s, `isDeleted` = %s
+               WHERE `id` = %d;''' % (parent, is_approved, is_highlighted, is_edited,
+                                      is_spam, is_deleted, post_id)
+    cursor.execute(query)
+
+
 def set_post_deleted(cursor, post, logical):
     query = '''UPDATE `Post`
                SET `isDeleted` = %s
@@ -152,13 +165,36 @@ def set_post_vote(cursor, post, vote):
 
 #--------------------------------------------------------------------------------------------------
 
+
+def set_user(cursor, username, about, name, email, is_anonymous):
+    is_anonymous = optional(is_anonymous, 'false')
+
+    query = '''INSERT INTO `User` (`username`, `about`, `email`, `name`, `isAnonymous`)
+               VALUES ('%s', '%s', '%s', '%s', %s);''' \
+            % (username, about, email, name, is_anonymous)
+
+    cursor.execute(query)
+
+
+def get_user_by_email(cursor, email):
+    query = '''SELECT `id`, `username`, `about`, `name`, `email`
+               FROM `User`
+               WHERE `email` = '%s';''' % email
+    cursor.execute(query)
+
+    user = cursor.fetchone()
+    if user is None:
+        raise NotFound("User with the '%s' email is not found" % email)
+
+    return user
+
 #--------------------------------------------------------------------------------------------------
 
 
 def get_thread_by_id(cursor, thread_id):
     query = '''SELECT `date`, `dislikes`, `forum`, `id`,
                       `isClosed`, `isDeleted`, `likes`, `message`,
-                      `points`, `posts`, `slug`, `title`, `user`
+                      `slug`, `title`, `author`
                FROM `Thread`
                WHERE `id` = %d
                LIMIT 1;''' % thread_id
@@ -169,6 +205,17 @@ def get_thread_by_id(cursor, thread_id):
         raise NotFound("Thread with the '%d' id is not found" % thread_id)
 
     return thread
+
+
+def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted):
+    is_deleted = optional(is_deleted, 'false')
+
+    query = '''INSERT INTO `Thread` (`forum`, `title`, `isClosed`, `author`,
+                                     `date`, `message`, `slug`, `isDeleted`)
+               VALUES ('%s', '%s', %s, '%s', '%s', '%s', '%s', %s);''' \
+            % (forum, title, is_closed, user, date, message, slug, is_deleted)
+
+    cursor.execute(query)
 
 
 def set_thread_closed(cursor, thread, logical):

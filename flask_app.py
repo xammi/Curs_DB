@@ -3,6 +3,7 @@
 from flask import Flask
 from flask import request, render_template, jsonify
 from mysql.connector.errors import IntegrityError as IsDuplicate
+from mysql.connector.errors import OperationalError as FailedConstraint
 import mysql.connector
 from sql_utils import *
 
@@ -19,472 +20,506 @@ UNCORRECT_QUERY = 3
 UNKNOWN = 4
 USER_EXISTED = 5
 
-# Нужно ли хранить внешние ключи как id или как строки
-# Как строки: индекс в виде HASH | M3
 
-# Можно ли делать повторные запросы или нужно сделать за один
-# Пытаться за один, но можно
+class exceptions():
+    def __init__(self, function):
+        self.function = function
+        self.__name__ = function.__name__
 
-# Как работать с иерархическими структурами в mysql
-# Materialized path, конец 2 лекции
+    def __call__(self):
+        try:
+            return self.function()
+
+        except RequiredNone as e:
+            return jsonify({'code': INVALID_QUERY, 'response': e.msg})
+
+        except (FailedConstraint, IsDuplicate) as e:
+            return jsonify({'code': UNCORRECT_QUERY, 'response': e.msg})
+
+        except DBException as e:
+            return jsonify({'code': UNKNOWN, 'response': e.msg})
 
 
-def extract(store, args):
-    if hasattr(store, 'get'):
-        if len(args) == 1:
-            return store.get(args[0])
-        return tuple(store.get(arg) for arg in args)
+def extract_opt(store, args):
+    if len(args) == 1:
+        return store.get(args[0])
+    return tuple(store.get(arg) for arg in args)
 
-    if hasattr(store, '__getitem__'):
-        if len(args) == 1:
-            return store.get(args[0])
-        return tuple(store[arg] for arg in args)
+
+def extract_req(store, req_args):
+    for arg in req_args:
+        if store.get(arg) is None:
+            raise RequiredNone(arg)
+
+    return extract_opt(store, req_args)
 
 
 @app.route("/", methods=['GET', 'POST'])
+@exceptions
 def tester():
     tml = "test.html"
     return render_template(tml)
 
 
 @app.route(API_PREFIX + "/forum/create/", methods=['POST'])
+@exceptions
 def forum_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    args = ['name', 'short_name', 'user']
-    name, short_name, user = extract(request.json, args)
+    req_args = ['name', 'short_name', 'user']
+    name, short_name, user = extract_req(request.json, req_args)
 
-    try:
-        set_forum(cursor, name, short_name, user)
-        connect.commit()
+    set_forum(cursor, name, short_name, user)
+    connect.commit()
+    forum = get_forum_by_slug(cursor, short_name)
 
-        response = {'name': name, 'short_name': short_name, 'user': user}
-        return jsonify({'code': OK, 'response': response})
-
-    except IsDuplicate as e:
-        return jsonify({'code': UNCORRECT_QUERY, 'response': e.message})
-    except DBException as e:
-        return jsonify({'code': UNKNOWN, 'response': e.message})
+    return jsonify({'code': OK, 'response': forum})
 
 
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
+@exceptions
 def forum_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    args = ['related', 'forum']
-    related, short_name = extract(request.args, args)
+    req_args = ['forum']
+    opt_args = ['related']
+    short_name = extract_req(request.args, req_args)
+    related = extract_opt(request.args, opt_args)
 
     related = optional(related, [])
 
-    try:
-        forum = get_forum_by_slug(cursor, short_name)
-        if 'user' in related:
-            user = get_user_by_email(cursor, forum['founder'])
-            forum.update({'user': user})
+    forum = get_forum_by_slug(cursor, short_name)
+    if 'user' in related:
+        user = get_user_by_email(cursor, forum['founder'])
+        forum.update({'user': user})
 
-        return jsonify({'code': OK, 'response': forum})
-
-    except NotFound as e:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.message})
-    except DBException as e:
-        return jsonify({'code': UNKNOWN, 'response': e.message})
+    return jsonify({'code': OK, 'response': forum})
 
 
 # DEBUG
 @app.route(API_PREFIX + "/forum/listPosts/", methods=['GET'])
+@exceptions
 def forum_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    args = ['forum', 'since', 'limit', 'sort', 'order', 'related']
-    short_name, since, limit, sort, order, related = extract(request.args, args)
+    req_args = ['forum']
+    opt_args = ['since', 'limit', 'sort', 'order', 'related']
+    short_name = extract_req(request.args, req_args)
+    since, limit, sort, order, related = extract_opt(request.args, opt_args)
 
     related = optional(related, [])
 
-    try:
-        forum = get_forum_by_slug(cursor, short_name)
-        posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
+    forum = get_forum_by_slug(cursor, short_name)
+    posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
 
-        for post in posts:
-            user = get_user_by_id(cursor, post['user'])
+    for post in posts:
+        user = get_user_by_id(cursor, post['user'])
 
-            post['user'] = user['email']
-            if 'user' in related:
-                post['user'] = user
+        post['user'] = user['email']
+        if 'user' in related:
+            post['user'] = user
 
-            if 'forum' in related:
-                post.update({'forum': forum})
+        if 'forum' in related:
+            post.update({'forum': forum})
 
-        return jsonify({'code': OK, 'response': posts})
-
-    except NotFound as e:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.message})
+    return jsonify({'code': OK, 'response': posts})
 
 
 # DEBUG
 @app.route(API_PREFIX + "/forum/listThreads/", methods=["GET"])
+@exceptions
 def forum_threads():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    args = ['forum', 'since', 'limit', 'order', 'related']
-    short_name, since, limit, order, related = extract(request.args, args)
+    req_args = ['forum']
+    opt_args = ['since', 'limit', 'order', 'related']
+    short_name = extract_req(request.args, req_args)
+    since, limit, order, related = extract_opt(request.args, opt_args)
 
     related = optional(related, [])
-    try:
-        forum = get_forum_by_slug(cursor, short_name)
-        threads = get_forum_threads(cursor, forum['id'], since, limit, order)
 
-        for thread in threads:
-            user = get_user_by_id(cursor, thread['user'])
+    forum = get_forum_by_slug(cursor, short_name)
+    threads = get_forum_threads(cursor, forum['id'], since, limit, order)
 
-            thread['user'] = user['email']
-            if 'user' in related:
-                thread['user'] = user
+    for thread in threads:
+        user = get_user_by_id(cursor, thread['user'])
 
-            if 'forum' in related:
-                thread['forum'] = forum
+        thread['user'] = user['email']
+        if 'user' in related:
+            thread['user'] = user
 
-        return jsonify({'code': OK, 'response': threads})
+        if 'forum' in related:
+            thread['forum'] = forum
 
-    except NotFound as e:
-        return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.message})
+    return jsonify({'code': OK, 'response': threads})
 
 
 # BUILD
 @app.route(API_PREFIX + "/forum/listUsers/", methods=["GET"])
+@exceptions
 def forum_users():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['forum', 'limit', 'order', 'since_id']
-    short_name, limit, order, since_id = extract(args)
+
+    req_args = ['forum']
+    opt_args = ['limit', 'order', 'since_id']
+    short_name = extract_req(request.args, req_args)
+    limit, order, since_id = extract_opt(request.args, opt_args)
 
 
 #--------------------------------------------------------------------------------------------------
 
 
-# BUILD
 @app.route(API_PREFIX + "/post/create/", methods=["POST"])
+@exceptions
 def post_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['date', 'thread', 'message', 'user', 'forum']
-    date, thread, message, user, forum = extract(request.json, req_args)
     opt_args = ['parent', 'isApproved', 'isHighlighted', 'isEdited', 'isSpam', 'isDeleted']
-    parent, isApproved, isHighlighted, isEdited, isSpam, isDeleted = extract(request.args, opt_args)
+    date, thread, message, user, forum = extract_req(request.json, req_args)
+    parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(request.json, opt_args)
+
+    set_post(cursor, date, thread, message, user, forum)
+    post_id = cursor.lastrowid
+    set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted)
+    connect.commit()
+
+    post = get_post_by_id(cursor, post_id)
+    return jsonify({'code': OK, 'response': post})
 
 
 # BUILD
 @app.route(API_PREFIX + "/post/details/", methods=["GET"])
+@exceptions
 def post_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['post', 'related']
-    post, related = extract(request.args, args)
+    req_args = ['post']
+    opt_args = ['related']
+    post = extract_req(request.args, req_args)
+    related = extract_opt(request.args, opt_args)
 
     related = optional(related, [])
 
 
 # BUILD
 @app.route(API_PREFIX + "/post/list/", methods=["GET"])
+@exceptions
 def post_list():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['forum', 'thread', 'since', 'limit', 'sort', 'order']
-    short_name, thread, since, limit, sort, order = extract(request.args, args)
+
+    opt_args = ['forum', 'thread', 'since', 'limit', 'sort', 'order']
+    short_name, thread, since, limit, sort, order = extract_opt(request.args, opt_args)
+
+    if short_name is None and thread is None:
+        raise RequiredNone('forum OR thread')
 
 
 @app.route(API_PREFIX + "/post/remove/", methods=["POST"])
+@exceptions
 def post_remove():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['post']
-    post = extract(request.json, args)
+    req_args = ['post']
+    post = extract_req(request.json, req_args)
 
-    try:
-        set_post_deleted(cursor, post, 'True')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'post': post}})
-
-    except DBException as e:
-        response = {'post': post, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_post_deleted(cursor, post, 'True')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'post': post}})
 
 
 @app.route(API_PREFIX + "/post/restore/", methods=["POST"])
+@exceptions
 def post_restore():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['post']
-    post = extract(request.json, args)
+    req_args = ['post']
+    post = extract_req(request.json, req_args)
 
-    try:
-        set_post_deleted(cursor, post, 'False')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'post': post}})
-
-    except DBException as e:
-        response = {'post': post, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_post_deleted(cursor, post, 'False')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'post': post}})
 
 
 @app.route(API_PREFIX + "/post/update/", methods=["POST"])
+@exceptions
 def post_update():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['post', 'message']
-    post, message = extract(request.json, args)
+    req_args = ['post', 'message']
+    post, message = extract_req(request.json, req_args)
 
-    try:
-        set_post_message(cursor, post, message)
-        connect.commit()
+    set_post_message(cursor, post, message)
+    connect.commit()
 
-        post = get_post_by_id(cursor, post)
-        return jsonify({'code': OK, 'response': post})
-
-    except DBException as e:
-        response = {'post': post, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    post = get_post_by_id(cursor, post)
+    return jsonify({'code': OK, 'response': post})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/post/vote/", methods=["POST"])
+@exceptions
 def post_vote():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['post', 'vote']
-    post, vote = extract(request.json, args)
+    req_args = ['post', 'vote']
+    post, vote = extract_req(request.json, req_args)
 
-    try:
-        set_post_vote(cursor, post, vote)
-        connect.commit()
+    set_post_vote(cursor, post, vote)
+    connect.commit()
 
-        post = get_post_by_id(cursor, post)
-        return jsonify({'code': OK, 'response': post})
-
-    except DBException as e:
-        response = {'post': post, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    post = get_post_by_id(cursor, post)
+    return jsonify({'code': OK, 'response': post})
 
 #--------------------------------------------------------------------------------------------------
 
-# BUILD
+
 @app.route(API_PREFIX + "/user/create/", methods=["POST"])
+@exceptions
 def user_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['username', 'about', 'name', 'email', 'isAnonymous']
-    username, about, name, email, isAnonymous = extract(request.json, args)
+
+    req_args = ['username', 'about', 'name', 'email', 'isAnonymous']
+    opt_args = ['isAnonymous']
+    username, about, name, email = extract_req(request.json, req_args)
+    is_anonymous = extract_opt(request.json, opt_args)
+
+    set_user(cursor, username, about, name, email, is_anonymous)
+    connect.commit()
+
+    user = get_user_by_email(cursor, email)
+    return jsonify({'code': OK, 'response': user})
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/details/", methods=["GET"])
+@exceptions
 def user_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user']
-    user = extract(request.args, args)
+
+    req_args = ['user']
+    user = extract_req(request.args, req_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/follow/", methods=["POST"])
+@exceptions
 def user_follow():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['follower', 'followee']
-    follower, followee = extract(request.json, args)
+
+    req_args = ['follower', 'followee']
+    follower, followee = extract_req(request.json, req_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/listFollowers/", methods=["GET"])
+@exceptions
 def user_list_followers():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user', 'limit', 'order', 'since_id']
-    user, limit, order, since_id = extract(request.args, args)
+
+    req_args = ['user']
+    opt_args = ['limit', 'order', 'since_id']
+    user = extract_req(request.args, req_args)
+    limit, order, since_id = extract_opt(request.args, opt_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/listFollowing/", methods=["GET"])
+@exceptions
 def user_list_following():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user', 'limit', 'order', 'since_id']
-    user, limit, order, since_id = extract(request.args, args)
+
+    req_args = ['user']
+    opt_args = ['limit', 'order', 'since_id']
+    user = extract_req(request.args, req_args)
+    limit, order, since_id = extract_opt(request.args, opt_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/listPosts/", methods=["GET"])
+@exceptions
 def user_list_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user', 'since', 'limit', 'sort', 'order']
-    user, since, limit, sort, order = extract(request.args, args)
+
+    req_args = ['user']
+    opt_args = ['since', 'limit', 'sort', 'order']
+    user = extract_req(request.args, req_args)
+    since, limit, sort, order = extract_opt(request.args, opt_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/unfollow/", methods=["POST"])
+@exceptions
 def user_unfollow():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['follower', 'followee']
-    follower, followee = extract(request.json, args)
+
+    req_args = ['follower', 'followee']
+    follower, followee = extract_req(request.json, req_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/user/updateProfile/", methods=["POST"])
+@exceptions
 def user_update_profile():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['about', 'user', 'name']
-    about, user, name = extract(request.json, args)
+
+    req_args = ['about', 'user', 'name']
+    about, user, name = extract_req(request.json, req_args)
 
 
 #--------------------------------------------------------------------------------------------------
 
-# DEBUG
+
 @app.route(API_PREFIX + "/thread/close/", methods=["POST"])
+@exceptions
 def thread_close():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread']
-    thread = extract(request.json, args)
 
-    try:
-        set_thread_closed(cursor, thread, 'True')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'thread': thread}})
+    req_args = ['thread']
+    thread = extract_req(request.json, req_args)
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_thread_closed(cursor, thread, 'True')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'thread': thread}})
 
 
-# BUILD
 @app.route(API_PREFIX + "/thread/create/", methods=["POST"])
+@exceptions
 def thread_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum', 'title', 'isClosed', 'user', 'date', 'message', 'slug']
-    forum, title, isClosed, user, date, message, slug = extract(request.json, req_args)
+    forum, title, is_closed, user, date, message, slug = extract_req(request.json, req_args)
     opt_args = ['isDeleted']
-    isDeleted = extract(request.json, opt_args)
+    is_deleted = extract_opt(request.json, opt_args)
+
+    set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted)
+    thread_id = cursor.lastrowid
+    connect.commit()
+
+    thread = get_thread_by_id(cursor, thread_id)
+    return jsonify({'code': OK, 'response': thread})
 
 
 # BUILD
 @app.route(API_PREFIX + "/thread/details/", methods=["GET"])
+@exceptions
 def thread_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread', 'related']
-    thread, related = extract(request.args, args)
+
+    req_args = ['thread']
+    opt_args = ['related']
+    thread = extract_req(request.args, req_args)
+    related = extract_opt(request.args, opt_args)
 
     related = optional(related, [])
 
 
 # BUILD
 @app.route(API_PREFIX + "/thread/list/", methods=["GET"])
+@exceptions
 def thread_list():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user', 'forum']
-    user, forum = extract(request.args, req_args)
+    user, forum = extract_req(request.args, req_args)
     opt_args = ['since', 'limit', 'order']
-    since, limit, order = extract(request.args, opt_args)
+    since, limit, order = extract_opt(request.args, opt_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/thread/listPosts/", methods=["GET"])
+@exceptions
 def thread_list_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread', 'since', 'limit', 'sort', 'order']
-    thread, since, limit, sort, order = extract(request.args, args)
+
+    req_args = ['thread']
+    opt_args = ['since', 'limit', 'sort', 'order']
+    thread = extract_req(request.args, req_args)
+    since, limit, sort, order = extract_opt(request.args, opt_args)
 
 
-# DEBUG
 @app.route(API_PREFIX + "/thread/open/", methods=["POST"])
+@exceptions
 def thread_open():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread']
-    thread = extract(request.json, args)
 
-    try:
-        set_thread_closed(cursor, thread, 'False')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'thread': thread}})
+    req_args = ['thread']
+    thread = extract_req(request.json, req_args)
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_thread_closed(cursor, thread, 'False')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'thread': thread}})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/thread/remove/", methods=["POST"])
+@exceptions
 def thread_remove():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread']
-    thread = extract(request.json, args)
 
-    try:
-        set_thread_deleted(cursor, thread, 'True')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'thread': thread}})
+    req_args = ['thread']
+    thread = extract_req(request.json, req_args)
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_thread_deleted(cursor, thread, 'True')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'thread': thread}})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/thread/restore/", methods=["POST"])
+@exceptions
 def thread_restore():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['thread']
-    thread = extract(request.json, args)
 
-    try:
-        set_thread_deleted(cursor, thread, 'False')
-        connect.commit()
-        return jsonify({'code': OK, 'response': {'thread': thread}})
+    req_args = ['thread']
+    thread = extract_req(request.json, req_args)
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    set_thread_deleted(cursor, thread, 'False')
+    connect.commit()
+    return jsonify({'code': OK, 'response': {'thread': thread}})
 
 
 # BUILD
 @app.route(API_PREFIX + "/thread/subscribe/", methods=["POST"])
+@exceptions
 def thread_subscribe():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user', 'thread']
-    user, thread = extract(request.json, args)
+
+    req_args = ['user', 'thread']
+    user, thread = extract_req(request.json, req_args)
 
 
 # BUILD
 @app.route(API_PREFIX + "/thread/unsubscribe/", methods=["POST"])
+@exceptions
 def thread_unsubscribe():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['user', 'thread']
-    user, thread = extract(request.json, args)
+
+    req_args = ['user', 'thread']
+    user, thread = extract_req(request.json, req_args)
 
 
-# DEBUG
 @app.route(API_PREFIX + "/thread/update/", methods=["POST"])
+@exceptions
 def thread_update():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['message', 'slug', 'thread']
-    message, slug, thread = extract(request.json, args)
 
-    try:
-        set_thread_message_slug(cursor, thread, message)
-        connect.commit()
+    req_args = ['message', 'slug', 'thread']
+    message, slug, thread = extract_req(request.json, req_args)
 
-        thread = get_thread_by_id(cursor, thread)
-        return jsonify({'code': OK, 'response': thread})
+    set_thread_message_slug(cursor, thread, message, slug)
+    connect.commit()
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    thread = get_thread_by_id(cursor, thread)
+    return jsonify({'code': OK, 'response': thread})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/thread/vote/", methods=["POST"])
+@exceptions
 def thread_vote():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    args = ['vote', 'thread']
-    vote, thread = extract(request.json, args)
 
-    try:
-        set_thread_vote(cursor, thread, vote)
-        connect.commit()
+    req_args = ['vote', 'thread']
+    vote, thread = extract_req(request.json, req_args)
 
-        thread = get_thread_by_id(cursor, thread)
-        return jsonify({'code': OK, 'response': thread})
+    set_thread_vote(cursor, thread, vote)
+    connect.commit()
 
-    except DBException as e:
-        response = {'thread': thread, 'message': e.message}
-        return jsonify({'code': UNKNOWN, 'response': response})
+    thread = get_thread_by_id(cursor, thread)
+    return jsonify({'code': OK, 'response': thread})
 
 
 #--------------------------------------------------------------------------------------------------
