@@ -54,11 +54,29 @@ def extract_req(store, req_args):
     return extract_opt(store, req_args)
 
 
+def extract_list(store, arg):
+    return optional(store.getlist(arg), [])
+
+#--------------------------------------------------------------------------------------------------
+
+
 @app.route("/", methods=['GET', 'POST'])
 @exceptions
 def tester():
     tml = "test.html"
     return render_template(tml)
+
+
+@app.route(API_PREFIX + "/clear/", methods=['POST'])
+@exceptions
+def clear():
+    cursor = connect.cursor()
+
+    sql = open('sql/create_DB.sql')
+    cursor.execute(sql.readlines())
+    connect.commit()
+
+    return jsonify({'code': OK, 'response': "OK"})
 
 
 @app.route(API_PREFIX + "/forum/create/", methods=['POST'])
@@ -82,71 +100,64 @@ def forum_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
-    opt_args = ['related']
     short_name = extract_req(request.args, req_args)
-    related = extract_opt(request.args, opt_args)
-
-    related = optional(related, [])
+    related = extract_list(request.args, 'related')
 
     forum = get_forum_by_slug(cursor, short_name)
     if 'user' in related:
-        user = get_user_by_email(cursor, forum['founder'])
+        user = get_user_by_email(cursor, forum['user'])
         forum.update({'user': user})
 
     return jsonify({'code': OK, 'response': forum})
 
 
-# DEBUG
+# BUILD
 @app.route(API_PREFIX + "/forum/listPosts/", methods=['GET'])
 @exceptions
 def forum_posts():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
-    opt_args = ['since', 'limit', 'sort', 'order', 'related']
+    opt_args = ['since', 'limit', 'sort', 'order']
     short_name = extract_req(request.args, req_args)
-    since, limit, sort, order, related = extract_opt(request.args, opt_args)
+    since, limit, sort, order = extract_opt(request.args, opt_args)
 
-    related = optional(related, [])
+    related = extract_list(request.args, 'related')
 
     forum = get_forum_by_slug(cursor, short_name)
-    posts = get_forum_posts(cursor, forum['id'], since, limit, sort, order)
+    posts = get_forum_posts(cursor, short_name, since, limit, sort, order)
 
     for post in posts:
-        user = get_user_by_id(cursor, post['user'])
-
-        post['user'] = user['email']
         if 'user' in related:
-            post['user'] = user
+            post['user'] = get_user_by_email(cursor, post['user'])
 
         if 'forum' in related:
             post.update({'forum': forum})
 
+        if 'thread' in related:
+            post['thread'] = get_thread_by_id(cursor, post['thread'])
+
     return jsonify({'code': OK, 'response': posts})
 
 
-# DEBUG
 @app.route(API_PREFIX + "/forum/listThreads/", methods=["GET"])
 @exceptions
 def forum_threads():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
-    opt_args = ['since', 'limit', 'order', 'related']
+    opt_args = ['since', 'limit', 'order']
     short_name = extract_req(request.args, req_args)
-    since, limit, order, related = extract_opt(request.args, opt_args)
+    since, limit, order = extract_opt(request.args, opt_args)
 
-    related = optional(related, [])
+    related = extract_list(request.args, 'related')
 
     forum = get_forum_by_slug(cursor, short_name)
-    threads = get_forum_threads(cursor, forum['id'], since, limit, order)
+    threads = get_forum_threads(cursor, short_name, since, limit, order)
 
     for thread in threads:
-        user = get_user_by_id(cursor, thread['user'])
-
-        thread['user'] = user['email']
         if 'user' in related:
-            thread['user'] = user
+            thread['user'] = get_user_by_email(cursor, thread['user'])
 
         if 'forum' in related:
             thread['forum'] = forum
@@ -194,11 +205,8 @@ def post_create():
 def post_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post']
-    opt_args = ['related']
     post = extract_req(request.args, req_args)
-    related = extract_opt(request.args, opt_args)
-
-    related = optional(related, [])
+    related = extract_list(request.args, 'related')
 
 
 # BUILD
@@ -273,7 +281,7 @@ def post_vote():
 def user_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    req_args = ['username', 'about', 'name', 'email', 'isAnonymous']
+    req_args = ['username', 'about', 'name', 'email']
     opt_args = ['isAnonymous']
     username, about, name, email = extract_req(request.json, req_args)
     is_anonymous = extract_opt(request.json, opt_args)
@@ -351,7 +359,6 @@ def user_unfollow():
     follower, followee = extract_req(request.json, req_args)
 
 
-# BUILD
 @app.route(API_PREFIX + "/user/updateProfile/", methods=["POST"])
 @exceptions
 def user_update_profile():
@@ -359,6 +366,11 @@ def user_update_profile():
 
     req_args = ['about', 'user', 'name']
     about, user, name = extract_req(request.json, req_args)
+
+    set_user_details(cursor, user, name, about)
+    user = get_user_by_email(cursor, user)
+
+    return jsonify({'code': OK, 'response': user})
 
 
 #--------------------------------------------------------------------------------------------------
@@ -395,18 +407,24 @@ def thread_create():
     return jsonify({'code': OK, 'response': thread})
 
 
-# BUILD
 @app.route(API_PREFIX + "/thread/details/", methods=["GET"])
 @exceptions
 def thread_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
-    opt_args = ['related']
     thread = extract_req(request.args, req_args)
-    related = extract_opt(request.args, opt_args)
+    related = extract_list(request.args, 'related')
 
-    related = optional(related, [])
+    thread = get_thread_by_id(cursor, int(thread))
+
+    if 'user' in related:
+        thread['user'] = get_user_by_email(cursor, thread['user'])
+
+    if 'forum' in related:
+        thread['forum'] = get_forum_by_slug(cursor, thread['forum'])
+
+    return jsonify({'code': OK, 'response': thread})
 
 
 # BUILD

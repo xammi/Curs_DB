@@ -35,61 +35,60 @@ class RequiredNone(DBException):
 # queries
 
 
-def set_forum(cursor, name, slug, user):
+def set_forum(cursor, name, short_name, user):
     query = '''INSERT INTO `Forum`
-               (`name`, `slug`, `founder`)
-               VALUES ('%s', '%s', '%s');''' % (name, slug, user)
+               (`name`, `short_name`, `user`)
+               VALUES ('%s', '%s', '%s');''' % (name, short_name, user)
     cursor.execute(query)
 
 
-def get_forum_by_slug(cursor, slug):
-    slug = optional(slug, 'no_name')
+def get_forum_by_slug(cursor, short_name):
+    short_name = optional(short_name, 'no_name')
 
-    query = '''SELECT `id`, `name`, `slug`, `founder`
+    query = '''SELECT *
                FROM `Forum`
-               WHERE `slug` = '%s'
-               LIMIT 1;''' % slug
+               WHERE `short_name` = '%s'
+               LIMIT 1;''' % short_name
     cursor.execute(query)
 
     forum = cursor.fetchone()
     if forum is None:
-        raise NotFound("Forum with the '%s' short_name is not found" % slug)
+        raise NotFound("Forum with the '%s' short_name is not found" % short_name)
 
     return forum
 
 
-def get_forum_posts(cursor, forum_id, since, limit, sort, order):
-    since = optional(since, '2000-01-01')
+def get_forum_posts(cursor, forum, since, limit, sort, order):
+    since = optional(since, '2000-01-01 00:00:00')
     order = optional(order, 'DESC')
     limit = optional(limit, '')
 
     if limit != '':
         limit = 'LIMIT ' + limit
 
-    query = '''SELECT `id`, `date`, `message`, `parent`, `user`,
-                      `isApproved`, `isDeleted`,`isEdited`, `isHighlighted`, `isSpam`
+    query = '''SELECT *
                FROM `Post`
-               WHERE `forum` = '%d' AND `date` > '%s'
+               WHERE `forum` = '%s' AND `date` > '%s'
                ORDER BY `date` %s
-               %s;''' % (forum_id, since, order, limit)
+               %s;''' % (forum, since, order, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
 
 
-def get_forum_threads(cursor, forum_id, since, limit, order):
-    since = optional(since, '2000-01-01')
+def get_forum_threads(cursor, forum, since, limit, order):
+    since = optional(since, '2000-01-01 00:00:00')
     order = optional(order, 'DESC')
     limit = optional(limit, '')
 
     if limit != '':
         limit = 'LIMIT ' + limit
 
-    query = '''SELECT `id`, `date`, `message`, `user`
+    query = '''SELECT *
                FROM `Thread`
-               WHERE `forum` = '%d' AND `date` > '%s'
+               WHERE `forum` = '%s' AND `date` > '%s'
                ORDER BY `date` %s
-               %s;''' % (forum_id, since, order, limit)
+               %s;''' % (forum, since, order, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
@@ -98,9 +97,7 @@ def get_forum_threads(cursor, forum_id, since, limit, order):
 
 
 def get_post_by_id(cursor, post_id):
-    query = '''SELECT `date`, `dislikes`, `forum`, `id`,
-                      `isApproved`, `isDeleted`, `isEdited`, `isHighlighted`, `isSpam`,
-                      `likes`, `message`, `parent`, `thread`, `author`
+    query = '''SELECT *
                FROM `Post`
                WHERE `id` = %d
                LIMIT 1;''' % post_id
@@ -114,7 +111,7 @@ def get_post_by_id(cursor, post_id):
 
 
 def set_post(cursor, date, thread, message, user, forum):
-    query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
+    query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`)
                VALUES ('%s', %d, '%s', '%s', '%s');''' % (date, thread, message, user, forum)
     cursor.execute(query)
 
@@ -176,8 +173,24 @@ def set_user(cursor, username, about, name, email, is_anonymous):
     cursor.execute(query)
 
 
+def get_user_followers(cursor, email):
+    query = '''SELECT *
+               FROM `Follow`
+               WHERE `follower` = '%s';''' % email
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_user_following(cursor, email):
+    query = '''SELECT *
+               FROM `Follow`
+               WHERE `followee` = '%s';''' % email
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
 def get_user_by_email(cursor, email):
-    query = '''SELECT `id`, `username`, `about`, `name`, `email`
+    query = '''SELECT *
                FROM `User`
                WHERE `email` = '%s';''' % email
     cursor.execute(query)
@@ -186,15 +199,24 @@ def get_user_by_email(cursor, email):
     if user is None:
         raise NotFound("User with the '%s' email is not found" % email)
 
+    user['followers'] = get_user_followers(cursor, email)
+    user['following'] = get_user_following(cursor, email)
+
     return user
+
+
+def set_user_details(cursor, user, name, about):
+    query = '''UPDATE `User`
+               SET `name` = '%s', `about` = '%s'
+               WHERE `email` = '%s';''' % (name, about, user)
+
+    cursor.execute(query)
 
 #--------------------------------------------------------------------------------------------------
 
 
 def get_thread_by_id(cursor, thread_id):
-    query = '''SELECT `date`, `dislikes`, `forum`, `id`,
-                      `isClosed`, `isDeleted`, `likes`, `message`,
-                      `slug`, `title`, `author`
+    query = '''SELECT *
                FROM `Thread`
                WHERE `id` = %d
                LIMIT 1;''' % thread_id
@@ -210,7 +232,7 @@ def get_thread_by_id(cursor, thread_id):
 def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted):
     is_deleted = optional(is_deleted, 'false')
 
-    query = '''INSERT INTO `Thread` (`forum`, `title`, `isClosed`, `author`,
+    query = '''INSERT INTO `Thread` (`forum`, `title`, `isClosed`, `user`,
                                      `date`, `message`, `slug`, `isDeleted`)
                VALUES ('%s', '%s', %s, '%s', '%s', '%s', '%s', %s);''' \
             % (forum, title, is_closed, user, date, message, slug, is_deleted)

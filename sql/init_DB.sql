@@ -8,33 +8,33 @@ VALUES ('eugene', 'eugene@mail.ru', 'Eugeniy Kislenko');
 
 #--------------------------------------------------------------------------------------------------
 
-INSERT INTO `Forum` (`slug`, `founder`, `name`)
+INSERT INTO `Forum` (`short_name`, `user`, `name`)
 VALUES ('progs', 'xammi@yandex.ru', 'Programming');
 
-INSERT INTO `Forum` (`slug`, `founder`, `name`)
+INSERT INTO `Forum` (`short_name`, `user`, `name`)
 VALUES ('cars', 'xammi@yandex.ru', 'Cars');
 
-INSERT INTO `Forum` (`slug`, `founder`, `name`)
+INSERT INTO `Forum` (`short_name`, `user`, `name`)
 VALUES ('toys', 'eugene@mail.ru', 'Computer toys');
 
-INSERT INTO `Forum` (`slug`, `founder`, `name`)
+INSERT INTO `Forum` (`short_name`, `user`, `name`)
 VALUES ('books', 'eugene@mail.ru', 'Interesting Books');
 
 #--------------------------------------------------------------------------------------------------
 
-INSERT INTO `Thread` (`forum`, `title`, `author`, `date`, `message`, `slug`)
+INSERT INTO `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`)
 VALUES ('progs', 'Python', 'xammi@yandex.ru', '2014-01-01', 'Python language', 'python');
 
-INSERT INTO `Thread` (`forum`, `title`, `author`, `date`, `message`, `slug`)
+INSERT INTO `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`)
 VALUES ('progs', 'C++', 'eugene@mail.ru', '2014-01-02', 'C++ language', 'cpp');
 
-INSERT INTO `Thread` (`forum`, `title`, `author`, `date`, `message`, `slug`)
+INSERT INTO `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`)
 VALUES ('toys', 'Civilization', 'eugene@mail.ru', '2014-01-02', 'Sid Meyers Civilization', 'civ');
 
 #--------------------------------------------------------------------------------------------------
 
-INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
+INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`)
 VALUES ('2014-01-03', 1, 'Template metaprogramming', 'xammi@yandex.ru', 'progs');
 
-INSERT INTO `Post` (`date`, `thread`, `message`, `author`, `forum`)
+INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`)
 VALUES ('2014-01-03', 1, 'Unit', 'eugene@mail.ru', 'toys');
