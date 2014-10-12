@@ -96,3 +96,15 @@ CREATE TABLE `Follow` (
     KEY USING HASH (`followee`),
     CONSTRAINT FOREIGN KEY (`followee`) REFERENCES `User` (`email`)
 );
+
+CREATE TABLE `Subscribe` (
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `user` VARCHAR (50) NOT NULL,
+    `thread` INT NOT NULL,
+
+    PRIMARY KEY (`id`),
+    KEY USING HASH (`user`),
+    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`),
+    KEY (`thread`),
+    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`)
+);

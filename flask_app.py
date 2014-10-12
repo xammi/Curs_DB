@@ -57,6 +57,11 @@ def extract_req(store, req_args):
 def extract_list(store, arg):
     return optional(store.getlist(arg), [])
 
+
+def response_ok(obj):
+    return jsonify({'code': OK, 'response': obj})
+
+
 #--------------------------------------------------------------------------------------------------
 
 
@@ -76,7 +81,7 @@ def clear():
     cursor.execute(sql.readlines())
     connect.commit()
 
-    return jsonify({'code': OK, 'response': "OK"})
+    return response_ok("OK")
 
 
 @app.route(API_PREFIX + "/forum/create/", methods=['POST'])
@@ -91,7 +96,7 @@ def forum_create():
     connect.commit()
     forum = get_forum_by_slug(cursor, short_name)
 
-    return jsonify({'code': OK, 'response': forum})
+    return response_ok(forum)
 
 
 @app.route(API_PREFIX + "/forum/details/", methods=['GET'])
@@ -108,7 +113,7 @@ def forum_details():
         user = get_user_by_email(cursor, forum['user'])
         forum.update({'user': user})
 
-    return jsonify({'code': OK, 'response': forum})
+    return response_ok(forum)
 
 
 # BUILD
@@ -137,7 +142,7 @@ def forum_posts():
         if 'thread' in related:
             post['thread'] = get_thread_by_id(cursor, post['thread'])
 
-    return jsonify({'code': OK, 'response': posts})
+    return response_ok(posts)
 
 
 @app.route(API_PREFIX + "/forum/listThreads/", methods=["GET"])
@@ -162,10 +167,9 @@ def forum_threads():
         if 'forum' in related:
             thread['forum'] = forum
 
-    return jsonify({'code': OK, 'response': threads})
+    return response_ok(threads)
 
 
-# BUILD
 @app.route(API_PREFIX + "/forum/listUsers/", methods=["GET"])
 @exceptions
 def forum_users():
@@ -175,6 +179,12 @@ def forum_users():
     opt_args = ['limit', 'order', 'since_id']
     short_name = extract_req(request.args, req_args)
     limit, order, since_id = extract_opt(request.args, opt_args)
+
+    users = get_forum_users(cursor, short_name, limit, order, since_id)
+    for user in users:
+        append_user(cursor, user)
+
+    return response_ok(users)
 
 
 #--------------------------------------------------------------------------------------------------
@@ -196,7 +206,7 @@ def post_create():
     connect.commit()
 
     post = get_post_by_id(cursor, post_id)
-    return jsonify({'code': OK, 'response': post})
+    return response_ok(post)
 
 
 # BUILD
@@ -231,7 +241,7 @@ def post_remove():
 
     set_post_deleted(cursor, post, 'True')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'post': post}})
+    return response_ok({'post': post})
 
 
 @app.route(API_PREFIX + "/post/restore/", methods=["POST"])
@@ -243,7 +253,7 @@ def post_restore():
 
     set_post_deleted(cursor, post, 'False')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'post': post}})
+    return response_ok({'post': post})
 
 
 @app.route(API_PREFIX + "/post/update/", methods=["POST"])
@@ -257,7 +267,7 @@ def post_update():
     connect.commit()
 
     post = get_post_by_id(cursor, post)
-    return jsonify({'code': OK, 'response': post})
+    return response_ok(post)
 
 
 @app.route(API_PREFIX + "/post/vote/", methods=["POST"])
@@ -271,7 +281,7 @@ def post_vote():
     connect.commit()
 
     post = get_post_by_id(cursor, post)
-    return jsonify({'code': OK, 'response': post})
+    return response_ok(post)
 
 #--------------------------------------------------------------------------------------------------
 
@@ -290,10 +300,9 @@ def user_create():
     connect.commit()
 
     user = get_user_by_email(cursor, email)
-    return jsonify({'code': OK, 'response': user})
+    return response_ok(user)
 
 
-# BUILD
 @app.route(API_PREFIX + "/user/details/", methods=["GET"])
 @exceptions
 def user_details():
@@ -302,8 +311,10 @@ def user_details():
     req_args = ['user']
     user = extract_req(request.args, req_args)
 
+    user = get_user_by_email(cursor, user)
+    return response_ok(user)
 
-# BUILD
+
 @app.route(API_PREFIX + "/user/follow/", methods=["POST"])
 @exceptions
 def user_follow():
@@ -311,6 +322,12 @@ def user_follow():
 
     req_args = ['follower', 'followee']
     follower, followee = extract_req(request.json, req_args)
+
+    set_user_follow(cursor, follower, followee)
+    connect.commit()
+
+    user = get_user_by_email(cursor, follower)
+    return response_ok(user)
 
 
 # BUILD
@@ -349,7 +366,6 @@ def user_list_posts():
     since, limit, sort, order = extract_opt(request.args, opt_args)
 
 
-# BUILD
 @app.route(API_PREFIX + "/user/unfollow/", methods=["POST"])
 @exceptions
 def user_unfollow():
@@ -357,6 +373,12 @@ def user_unfollow():
 
     req_args = ['follower', 'followee']
     follower, followee = extract_req(request.json, req_args)
+
+    set_user_unfollow(cursor, follower, followee)
+    connect.commit()
+
+    user = get_user_by_email(cursor, follower)
+    return response_ok(user)
 
 
 @app.route(API_PREFIX + "/user/updateProfile/", methods=["POST"])
@@ -370,7 +392,7 @@ def user_update_profile():
     set_user_details(cursor, user, name, about)
     user = get_user_by_email(cursor, user)
 
-    return jsonify({'code': OK, 'response': user})
+    return response_ok(user)
 
 
 #--------------------------------------------------------------------------------------------------
@@ -386,7 +408,7 @@ def thread_close():
 
     set_thread_closed(cursor, thread, 'True')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'thread': thread}})
+    return response_ok({'thread': thread})
 
 
 @app.route(API_PREFIX + "/thread/create/", methods=["POST"])
@@ -404,7 +426,7 @@ def thread_create():
     connect.commit()
 
     thread = get_thread_by_id(cursor, thread_id)
-    return jsonify({'code': OK, 'response': thread})
+    return response_ok(thread)
 
 
 @app.route(API_PREFIX + "/thread/details/", methods=["GET"])
@@ -424,7 +446,7 @@ def thread_details():
     if 'forum' in related:
         thread['forum'] = get_forum_by_slug(cursor, thread['forum'])
 
-    return jsonify({'code': OK, 'response': thread})
+    return response_ok(thread)
 
 
 # BUILD
@@ -461,7 +483,7 @@ def thread_open():
 
     set_thread_closed(cursor, thread, 'False')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'thread': thread}})
+    return response_ok({'thread': thread})
 
 
 @app.route(API_PREFIX + "/thread/remove/", methods=["POST"])
@@ -474,7 +496,7 @@ def thread_remove():
 
     set_thread_deleted(cursor, thread, 'True')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'thread': thread}})
+    return response_ok({'thread': thread})
 
 
 @app.route(API_PREFIX + "/thread/restore/", methods=["POST"])
@@ -487,10 +509,9 @@ def thread_restore():
 
     set_thread_deleted(cursor, thread, 'False')
     connect.commit()
-    return jsonify({'code': OK, 'response': {'thread': thread}})
+    return response_ok({'thread': thread})
 
 
-# BUILD
 @app.route(API_PREFIX + "/thread/subscribe/", methods=["POST"])
 @exceptions
 def thread_subscribe():
@@ -499,8 +520,13 @@ def thread_subscribe():
     req_args = ['user', 'thread']
     user, thread = extract_req(request.json, req_args)
 
+    set_thread_subscribe(cursor, user, thread)
+    connect.commit()
 
-# BUILD
+    subs = {'thread': thread, 'user': user}
+    return response_ok(subs)
+
+
 @app.route(API_PREFIX + "/thread/unsubscribe/", methods=["POST"])
 @exceptions
 def thread_unsubscribe():
@@ -508,6 +534,12 @@ def thread_unsubscribe():
 
     req_args = ['user', 'thread']
     user, thread = extract_req(request.json, req_args)
+
+    set_thread_unsubscribe(cursor, user, thread)
+    connect.commit()
+
+    subs = {'thread': thread, 'user': user}
+    return response_ok(subs)
 
 
 @app.route(API_PREFIX + "/thread/update/", methods=["POST"])
@@ -522,7 +554,7 @@ def thread_update():
     connect.commit()
 
     thread = get_thread_by_id(cursor, thread)
-    return jsonify({'code': OK, 'response': thread})
+    return response_ok(thread)
 
 
 @app.route(API_PREFIX + "/thread/vote/", methods=["POST"])
@@ -537,7 +569,7 @@ def thread_vote():
     connect.commit()
 
     thread = get_thread_by_id(cursor, thread)
-    return jsonify({'code': OK, 'response': thread})
+    return response_ok(thread)
 
 
 #--------------------------------------------------------------------------------------------------
