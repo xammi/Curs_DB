@@ -233,7 +233,7 @@ def get_user_subs(cursor, email):
     return cursor.fetchall()
 
 
-def append_user(cursor, user):
+def complete_user(cursor, user):
     email = user['email']
     user['followers'] = get_followers_list(cursor, email)
     user['following'] = get_following_list(cursor, email)
@@ -252,7 +252,7 @@ def get_user_by_email(cursor, email):
     if user is None:
         raise NotFound("User with the '%s' email is not found" % email)
 
-    append_user(cursor, user)
+    complete_user(cursor, user)
     return user
 
 
@@ -280,6 +280,85 @@ def set_user_unfollow(cursor, follower, followee):
 
     cursor.execute(query)
 
+
+def get_user_followers(cursor, user, limit, order, since_id):
+    limit = optional(limit, '')
+    order = optional(order, 'DESC')
+    since_id = optional(since_id, 0)
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT *
+               FROM `Follow` AS F
+               JOIN `User` AS U ON F.`followee` = U.`email`
+               WHERE `follower` = '%s' AND U.`id` > %d
+               ORDER BY `name` %s
+               %s;
+            ''' % (user, since_id, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_user_following(cursor, user, limit, order, since_id):
+    limit = optional(limit, '')
+    order = optional(order, 'DESC')
+    since_id = optional(since_id, 0)
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT *
+               FROM `Follow` AS F
+               JOIN `User` AS U ON F.`follower` = U.`email`
+               WHERE `followee` = '%s' AND U.`id` > %d
+               ORDER BY `name` %s
+               %s;
+            ''' % (user, since_id, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_user_posts(cursor, user, since, limit, sort, order):
+    since = optional(since, '2000-01-01 00:00:00')
+    order = optional(order, 'DESC')
+    limit = optional(limit, '')
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT *
+               FROM `Post`
+               WHERE `user` = '%s' AND `date` > '%s'
+               ORDER BY `date` %s
+               %s;
+            ''' % (user, since, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def get_user_threads(cursor, user, since, limit, order):
+    since = optional(since, '2000-01-01 00:00:00')
+    order = optional(order, 'DESC')
+    limit = optional(limit, '')
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT *
+               FROM `Thread`
+               WHERE `user` = '%s' AND `date` > '%s'
+               ORDER BY `date` %s
+               %s;
+            ''' % (user, since, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
 #--------------------------------------------------------------------------------------------------
 
 
@@ -296,6 +375,25 @@ def get_thread_by_id(cursor, thread_id):
         raise NotFound("Thread with the '%d' id is not found" % thread_id)
 
     return thread
+
+
+def get_thread_posts(cursor, thread, since, limit, sort, order):
+    since = optional(since, '2000-01-01 00:00:00')
+    order = optional(order, 'DESC')
+    limit = optional(limit, '')
+
+    if limit != '':
+        limit = 'LIMIT ' + limit
+
+    query = '''SELECT *
+               FROM `Post`
+               WHERE `thread` = %d AND `date` > '%s'
+               ORDER BY `date` %s
+               %s;
+            ''' % (thread, since, order, limit)
+
+    cursor.execute(query)
+    return cursor.fetchall()
 
 
 def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted):

@@ -72,6 +72,7 @@ def tester():
     return render_template(tml)
 
 
+# BUILD
 @app.route(API_PREFIX + "/clear/", methods=['POST'])
 @exceptions
 def clear():
@@ -182,7 +183,7 @@ def forum_users():
 
     users = get_forum_users(cursor, short_name, limit, order, since_id)
     for user in users:
-        append_user(cursor, user)
+        complete_user(cursor, user)
 
     return response_ok(users)
 
@@ -209,15 +210,27 @@ def post_create():
     return response_ok(post)
 
 
-# BUILD
 @app.route(API_PREFIX + "/post/details/", methods=["GET"])
 @exceptions
 def post_details():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
+
     req_args = ['post']
     post = extract_req(request.args, req_args)
     related = extract_list(request.args, 'related')
 
+    post = get_post_by_id(cursor, post)
+
+    if 'user' in related:
+        post['user'] = get_user_by_email(cursor, post['user'])
+
+    if 'forum' in related:
+        post['forum'] = get_forum_by_slug(cursor, post['forum'])
+
+    if 'thread' in related:
+        post['thread'] = get_thread_by_id(cursor, post['thread'])
+
+    return response_ok(post)
 
 # BUILD
 @app.route(API_PREFIX + "/post/list/", methods=["GET"])
@@ -230,6 +243,14 @@ def post_list():
 
     if short_name is None and thread is None:
         raise RequiredNone('forum OR thread')
+
+    posts = []
+    if not short_name is None:
+        posts = get_forum_posts(cursor, short_name, since, limit, sort, order)
+    elif not thread is None:
+        posts = get_thread_posts(cursor, thread, since, limit, sort, order)
+
+    return response_ok(posts)
 
 
 @app.route(API_PREFIX + "/post/remove/", methods=["POST"])
@@ -341,6 +362,12 @@ def user_list_followers():
     user = extract_req(request.args, req_args)
     limit, order, since_id = extract_opt(request.args, opt_args)
 
+    followers = get_user_followers(cursor, user, limit, order, since_id)
+    for follower in followers:
+        complete_user(cursor, follower)
+
+    return response_ok(followers)
+
 
 # BUILD
 @app.route(API_PREFIX + "/user/listFollowing/", methods=["GET"])
@@ -353,6 +380,12 @@ def user_list_following():
     user = extract_req(request.args, req_args)
     limit, order, since_id = extract_opt(request.args, opt_args)
 
+    followees = get_user_followers(cursor, user, limit, order, since_id)
+    for follower in followees:
+        complete_user(cursor, follower)
+
+    return response_ok(followees)
+
 
 # BUILD
 @app.route(API_PREFIX + "/user/listPosts/", methods=["GET"])
@@ -364,6 +397,9 @@ def user_list_posts():
     opt_args = ['since', 'limit', 'sort', 'order']
     user = extract_req(request.args, req_args)
     since, limit, sort, order = extract_opt(request.args, opt_args)
+
+    posts = get_user_posts(cursor, user, since, limit, sort, order)
+    return response_ok(posts)
 
 
 @app.route(API_PREFIX + "/user/unfollow/", methods=["POST"])
@@ -455,10 +491,19 @@ def thread_details():
 def thread_list():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    req_args = ['user', 'forum']
-    user, forum = extract_req(request.args, req_args)
-    opt_args = ['since', 'limit', 'order']
-    since, limit, order = extract_opt(request.args, opt_args)
+    opt_args = ['user', 'forum', 'since', 'limit', 'order']
+    user, forum, since, limit, order = extract_opt(request.args, opt_args)
+
+    if user is None and forum is None:
+        raise RequiredNone('user OR forum')
+
+    threads = []
+    if not user is None:
+        threads = get_user_threads(cursor, user, since, limit, order)
+    elif not forum is None:
+        threads = get_forum_threads(cursor, forum, since, limit, order)
+
+    return response_ok(threads)
 
 
 # BUILD
@@ -471,6 +516,9 @@ def thread_list_posts():
     opt_args = ['since', 'limit', 'sort', 'order']
     thread = extract_req(request.args, req_args)
     since, limit, sort, order = extract_opt(request.args, opt_args)
+
+    posts = get_thread_posts(cursor,thread, since, limit, sort, order)
+    return response_ok(posts)
 
 
 @app.route(API_PREFIX + "/thread/open/", methods=["POST"])
