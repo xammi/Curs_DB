@@ -26,7 +26,7 @@ CREATE TABLE `Forum`(
     UNIQUE KEY USING HASH (`short_name`),
     UNIQUE KEY USING HASH (`name`),
     KEY USING HASH (`user`),
-    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`)
+    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE
 );
 
 
@@ -50,11 +50,10 @@ CREATE TABLE `Thread` (
     PRIMARY KEY (`id`),
     KEY USING HASH (`slug`),
     KEY USING HASH (`forum`),
-    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`short_name`),
+    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`short_name`) ON DELETE CASCADE,
     KEY USING HASH (`user`),
-    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`)
+    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE
 );
-
 
 CREATE TABLE `Post` (
 	`id` INT NOT NULL AUTO_INCREMENT,	
@@ -78,12 +77,17 @@ CREATE TABLE `Post` (
 	PRIMARY KEY (`id`),
     KEY (`parent`),
     KEY USING HASH (`forum`),
-    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`short_name`),
+    CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`short_name`) ON DELETE CASCADE,
     KEY USING HASH (`user`),
-    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`),
+    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY (`thread`),
-    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`)
+    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`) ON DELETE CASCADE
 );
+
+CREATE TRIGGER ins_post
+BEFORE INSERT ON `Post`
+FOR EACH ROW
+UPDATE `Thread` SET `posts` = `posts` + 1 WHERE `id` = NEW.`thread`;
 
 CREATE TABLE `Follow` (
     `id` INT NOT NULL AUTO_INCREMENT,
@@ -92,9 +96,9 @@ CREATE TABLE `Follow` (
 
     PRIMARY KEY (`id`),
     KEY USING HASH (`follower`),
-    CONSTRAINT FOREIGN KEY (`follower`) REFERENCES `User` (`email`),
+    CONSTRAINT FOREIGN KEY (`follower`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY USING HASH (`followee`),
-    CONSTRAINT FOREIGN KEY (`followee`) REFERENCES `User` (`email`)
+    CONSTRAINT FOREIGN KEY (`followee`) REFERENCES `User` (`email`) ON DELETE CASCADE
 );
 
 CREATE TABLE `Subscribe` (
@@ -104,7 +108,7 @@ CREATE TABLE `Subscribe` (
 
     PRIMARY KEY (`id`),
     KEY USING HASH (`user`),
-    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`),
+    CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY (`thread`),
-    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`)
+    CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`) ON DELETE CASCADE
 );

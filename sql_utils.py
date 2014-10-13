@@ -9,12 +9,25 @@ def optional(obj, default):
     return obj
 
 
+def hierarchy_sort(sort):
+    if sort is None or sort == 'flat':
+        sort = ''
+    elif sort == 'tree':
+        sort = ', `parent` ASC'
+    elif sort == 'parent_tree':
+        sort = ', `parent` ASC'
+
+    return sort
+
+#--------------------------------------------------------------------------------------------------
+
+
 class MySQLCursorDict(MySQLCursor):
     def _row_to_python(self, rowdata, desc=None):
         row = super(MySQLCursorDict, self)._row_to_python(rowdata, desc)
         if row:
             if len(self.column_names) == 1:
-                return row
+                return row[0]
             return dict(zip(self.column_names, row))
         return None
 
@@ -33,8 +46,12 @@ class RequiredNone(DBException):
     def __init__(self, arg):
         self.msg = 'Required parameter (%s) not found' % arg
 
+# queries -----------------------------------------------------------------------------------------
 
-# queries
+
+def clear_all(cursor):
+    query = '''TRUNCATE TABLE `User`;'''
+    cursor.execute(query)
 
 
 def set_forum(cursor, name, short_name, user):
@@ -66,6 +83,7 @@ def get_forum_posts(cursor, forum, since, limit, sort, order):
     since = optional(since, '2000-01-01 00:00:00')
     order = optional(order, 'DESC')
     limit = optional(limit, '')
+    sort = hierarchy_sort(sort)
 
     if limit != '':
         limit = 'LIMIT ' + limit
@@ -73,9 +91,9 @@ def get_forum_posts(cursor, forum, since, limit, sort, order):
     query = '''SELECT *
                FROM `Post`
                WHERE `forum` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s
+               ORDER BY `date` %s %s
                %s;
-            ''' % (forum, since, order, limit)
+            ''' % (forum, since, order, sort, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
@@ -183,13 +201,15 @@ def set_post_message(cursor, post, message):
 def set_post_vote(cursor, post, vote):
     if vote < 0:
         column = 'dislikes'
+        points = '- 1'
     else:
         column = 'likes'
+        points = '+ 1'
 
     query = '''UPDATE `Post`
-               SET `%s` = `%s` + 1
+               SET `%s` = `%s` + 1, `points` = `points` %s
                WHERE `id` = %d;
-            ''' % (column, column, post)
+            ''' % (column, column, points, post)
 
     cursor.execute(query)
 
@@ -329,12 +349,13 @@ def get_user_posts(cursor, user, since, limit, sort, order):
     if limit != '':
         limit = 'LIMIT ' + limit
 
+    sort = hierarchy_sort(sort)
     query = '''SELECT *
                FROM `Post`
                WHERE `user` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s
+               ORDER BY `date` %s %s
                %s;
-            ''' % (user, since, order, limit)
+            ''' % (user, since, order, sort, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
@@ -385,12 +406,13 @@ def get_thread_posts(cursor, thread, since, limit, sort, order):
     if limit != '':
         limit = 'LIMIT ' + limit
 
+    sort = hierarchy_sort(sort)
     query = '''SELECT *
                FROM `Post`
                WHERE `thread` = %d AND `date` > '%s'
-               ORDER BY `date` %s
+               ORDER BY `date` %s %s
                %s;
-            ''' % (thread, since, order, limit)
+            ''' % (thread, since, order, sort, limit)
 
     cursor.execute(query)
     return cursor.fetchall()
@@ -437,13 +459,15 @@ def set_thread_message_slug(cursor, thread, message, slug):
 def set_thread_vote(cursor, thread, vote):
     if vote < 0:
         column = 'dislikes'
+        points = '- 1'
     else:
         column = 'likes'
+        points = '+ 1'
 
     query = '''UPDATE `Thread`
-               SET `%s` = `%s` + 1
+               SET `%s` = `%s` + 1, `points` = `points` %s
                WHERE `id` = %d;
-            ''' % (column, column, thread)
+            ''' % (column, column, points, thread)
 
     cursor.execute(query)
 

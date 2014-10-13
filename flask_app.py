@@ -76,12 +76,9 @@ def tester():
 @app.route(API_PREFIX + "/clear/", methods=['POST'])
 @exceptions
 def clear():
-    cursor = connect.cursor()
-
-    sql = open('sql/create_DB.sql')
-    cursor.execute(sql.readlines())
+    cursor = connect.cursor(cursor_class=MySQLCursorDict)
+    clear_all(cursor)
     connect.commit()
-
     return response_ok("OK")
 
 
@@ -231,6 +228,7 @@ def post_details():
         post['thread'] = get_thread_by_id(cursor, post['thread'])
 
     return response_ok(post)
+
 
 # BUILD
 @app.route(API_PREFIX + "/post/list/", methods=["GET"])
@@ -517,7 +515,7 @@ def thread_list_posts():
     thread = extract_req(request.args, req_args)
     since, limit, sort, order = extract_opt(request.args, opt_args)
 
-    posts = get_thread_posts(cursor,thread, since, limit, sort, order)
+    posts = get_thread_posts(cursor, thread, since, limit, sort, order)
     return response_ok(posts)
 
 
