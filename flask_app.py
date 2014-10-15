@@ -30,11 +30,14 @@ class exceptions():
         try:
             return self.function()
 
-        except RequiredNone as e:
+        except (RequiredNone, WrongType) as e:
             return jsonify({'code': INVALID_QUERY, 'response': e.msg})
 
-        except (FailedConstraint, IsDuplicate) as e:
+        except FailedConstraint as e:
             return jsonify({'code': UNCORRECT_QUERY, 'response': e.msg})
+
+        except NotFound as e:
+            return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
 
         except DBException as e:
             return jsonify({'code': UNKNOWN, 'response': e.msg})
@@ -90,10 +93,13 @@ def forum_create():
     req_args = ['name', 'short_name', 'user']
     name, short_name, user = extract_req(request.json, req_args)
 
-    set_forum(cursor, name, short_name, user)
-    connect.commit()
-    forum = get_forum_by_slug(cursor, short_name)
+    try:
+        set_forum(cursor, name, short_name, user)
+        connect.commit()
+    except IsDuplicate:
+        pass
 
+    forum = get_forum_by_slug(cursor, short_name)
     return response_ok(forum)
 
 
@@ -198,9 +204,9 @@ def post_create():
     date, thread, message, user, forum = extract_req(request.json, req_args)
     parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(request.json, opt_args)
 
-    set_post(cursor, date, thread, message, user, forum)
+    set_post(cursor, date, thread, message, user, forum, is_deleted)
     post_id = cursor.lastrowid
-    set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted)
+    set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam)
     connect.commit()
 
     post = get_post_by_id(cursor, post_id)
@@ -310,13 +316,21 @@ def post_vote():
 def user_create():
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
-    req_args = ['username', 'about', 'name', 'email']
+    req_args = ['email']
+    cond_args = ['username', 'about', 'name']
     opt_args = ['isAnonymous']
-    username, about, name, email = extract_req(request.json, req_args)
+    email = extract_req(request.json, req_args)
+    username, about, name = extract_opt(request.json, cond_args)
     is_anonymous = extract_opt(request.json, opt_args)
 
-    set_user(cursor, username, about, name, email, is_anonymous)
-    connect.commit()
+    if is_anonymous == 'True':
+        extract_req(request.json, cond_args)
+
+    try:
+        set_user(cursor, username, about, name, email, is_anonymous)
+        connect.commit()
+    except IsDuplicate:
+        return jsonify({'code': USER_EXISTED, 'response': "User already exists"})
 
     user = get_user_by_email(cursor, email)
     return response_ok(user)
@@ -397,6 +411,7 @@ def user_list_posts():
     since, limit, sort, order = extract_opt(request.args, opt_args)
 
     posts = get_user_posts(cursor, user, since, limit, sort, order)
+
     return response_ok(posts)
 
 
@@ -472,7 +487,7 @@ def thread_details():
     thread = extract_req(request.args, req_args)
     related = extract_list(request.args, 'related')
 
-    thread = get_thread_by_id(cursor, int(thread))
+    thread = get_thread_by_id(cursor, thread)
 
     if 'user' in related:
         thread['user'] = get_user_by_email(cursor, thread['user'])
@@ -516,6 +531,7 @@ def thread_list_posts():
     since, limit, sort, order = extract_opt(request.args, opt_args)
 
     posts = get_thread_posts(cursor, thread, since, limit, sort, order)
+
     return response_ok(posts)
 
 
