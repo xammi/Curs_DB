@@ -93,22 +93,6 @@ UPDATE `Thread` SET `posts` = `posts` + 1 WHERE `id` = NEW.`thread`;
 
 DROP TRIGGER IF EXISTS del_post;
 
-DELIMITER //
-
-CREATE TRIGGER del_post
-BEFORE UPDATE ON `Post`
-FOR EACH ROW
-BEGIN
-    IF NEW.`isDeleted` IS TRUE AND OLD.`isDeleted` IS FALSE THEN
-        UPDATE `Thread` SET `posts` = `posts` - 1 WHERE `id` = NEW.`thread`;
-
-    ELSEIF NEW.`isDeleted` IS FALSE AND OLD.`isDeleted` IS TRUE THEN
-        UPDATE `Thread` SET `posts` = `posts` + 1 WHERE `id` = NEW.`thread`;
-    END IF;
-END;//
-
-DELIMITER ;
-
 CREATE TABLE `Follow` (
     `id` INT NOT NULL AUTO_INCREMENT,
     `follower` VARCHAR (50) NOT NULL,
