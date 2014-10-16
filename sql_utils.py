@@ -52,6 +52,11 @@ class WrongType(DBException):
         self.msg = 'Parameter (%s) must be of %s type' % (param, right_type)
 
 
+class WrongRelated(DBException):
+    def __init__(self, param):
+        self.msg = 'Unknown related param (%s)' % param
+
+
 def number(string, param):
     try:
         return int(string)
@@ -66,8 +71,15 @@ def logic(obj, param):
         raise WrongType(param, 'bool')
 
 
+def none(obj):
+    if obj == 'None':
+        return None
+    return obj
+
+
 thread_bools = ['isClosed', 'isDeleted']
 post_bools = ['isApproved', 'isHighlighted', 'isDeleted', 'isSpam', 'isEdited']
+user_nones = ['username', 'name', 'about']
 bu = 'isAnonymous'
 
 
@@ -85,6 +97,9 @@ def prepare_post(post):
 
 def prepare_user(user):
     user[bu] = logic(user[bu], bu)
+    if user[bu]:
+        for un in user_nones:
+            user[un] = none(user[un])
 
 # queries -----------------------------------------------------------------------------------------
 
@@ -186,7 +201,7 @@ def get_forum_users(cursor, forum, limit, order, since_id):
 
     query = '''SELECT *
                FROM `User`
-               WHERE `User`.`id` > %s AND EXISTS (
+               WHERE `User`.`id` >= %s AND EXISTS (
                    SELECT * FROM `Post` WHERE `forum` = '%s' AND `user` = `User`.`email`
                )
                ORDER BY `User`.`name` %s
@@ -249,7 +264,19 @@ def set_post_deleted(cursor, post, logical):
                SET `isDeleted` = %s
                WHERE `id` = %s;
             ''' % (logical, post)
+    cursor.execute(query)
 
+    if logical == 'True':
+        logical = '- 1'
+    else:
+        logical = '+ 1'
+
+    print logical
+    post = get_post_by_id(cursor, post)
+    query = '''UPDATE `Thread`
+               SET `posts` = `posts` %s
+               WHERE `id` = %s;
+            ''' % (logical, post['thread'])
     cursor.execute(query)
 
 
@@ -337,12 +364,6 @@ def get_user_by_email(cursor, email):
         raise NotFound("User with the '%s' email is not found" % email)
 
     complete_user(cursor, user)
-
-    if user[bu]:
-        user['about'] = None
-        user['name'] = None
-        user['username'] = None
-
     prepare_user(user)
     return user
 
@@ -382,8 +403,8 @@ def get_user_followers(cursor, user, limit, order, since_id):
 
     query = '''SELECT *
                FROM `Follow` AS F
-               JOIN `User` AS U ON F.`followee` = U.`email`
-               WHERE `follower` = '%s' AND U.`id` > %s
+               JOIN `User` AS U ON F.`follower` = U.`email`
+               WHERE `followee` = '%s' AND U.`id` >= %s
                ORDER BY `name` %s
                %s;
             ''' % (user, since_id, order, limit)
@@ -406,8 +427,8 @@ def get_user_following(cursor, user, limit, order, since_id):
 
     query = '''SELECT *
                FROM `Follow` AS F
-               JOIN `User` AS U ON F.`follower` = U.`email`
-               WHERE `followee` = '%s' AND U.`id` > %s
+               JOIN `User` AS U ON F.`followee` = U.`email`
+               WHERE `follower` = '%s' AND U.`id` >= %s
                ORDER BY `name` %s
                %s;
             ''' % (user, since_id, order, limit)

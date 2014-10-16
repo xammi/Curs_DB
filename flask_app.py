@@ -33,7 +33,7 @@ class exceptions():
         except (RequiredNone, WrongType) as e:
             return jsonify({'code': INVALID_QUERY, 'response': e.msg})
 
-        except FailedConstraint as e:
+        except (FailedConstraint, WrongRelated) as e:
             return jsonify({'code': UNCORRECT_QUERY, 'response': e.msg})
 
         except NotFound as e:
@@ -57,8 +57,14 @@ def extract_req(store, req_args):
     return extract_opt(store, req_args)
 
 
-def extract_list(store, arg):
-    return optional(store.getlist(arg), [])
+def extract_list(store, arg, awaited):
+    related = optional(store.getlist(arg), [])
+
+    for rel in related:
+        if not rel in awaited:
+            raise WrongRelated(rel)
+
+    return related
 
 
 def response_ok(obj):
@@ -110,7 +116,7 @@ def forum_details():
 
     req_args = ['forum']
     short_name = extract_req(request.args, req_args)
-    related = extract_list(request.args, 'related')
+    related = extract_list(request.args, 'related', ['user'])
 
     forum = get_forum_by_slug(cursor, short_name)
     if 'user' in related:
@@ -131,7 +137,7 @@ def forum_posts():
     short_name = extract_req(request.args, req_args)
     since, limit, sort, order = extract_opt(request.args, opt_args)
 
-    related = extract_list(request.args, 'related')
+    related = extract_list(request.args, 'related', ['user', 'forum', 'thread'])
 
     forum = get_forum_by_slug(cursor, short_name)
     posts = get_forum_posts(cursor, short_name, since, limit, sort, order)
@@ -159,7 +165,7 @@ def forum_threads():
     short_name = extract_req(request.args, req_args)
     since, limit, order = extract_opt(request.args, opt_args)
 
-    related = extract_list(request.args, 'related')
+    related = extract_list(request.args, 'related', ['user', 'forum'])
 
     forum = get_forum_by_slug(cursor, short_name)
     threads = get_forum_threads(cursor, short_name, since, limit, order)
@@ -220,7 +226,7 @@ def post_details():
 
     req_args = ['post']
     post = extract_req(request.args, req_args)
-    related = extract_list(request.args, 'related')
+    related = extract_list(request.args, 'related', ['user', 'forum', 'thread'])
 
     post = get_post_by_id(cursor, post)
 
@@ -485,7 +491,7 @@ def thread_details():
 
     req_args = ['thread']
     thread = extract_req(request.args, req_args)
-    related = extract_list(request.args, 'related')
+    related = extract_list(request.args, 'related', ['user', 'forum'])
 
     thread = get_thread_by_id(cursor, thread)
 
