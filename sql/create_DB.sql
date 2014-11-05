@@ -4,11 +4,11 @@ USE forum_db;
 
 CREATE TABLE `User`(
 	`id` INT NOT NULL AUTO_INCREMENT,
-	`username` NVARCHAR (50) NOT NULL,
+	`username` NVARCHAR (50),
     `email` VARCHAR (50) NOT NULL,
 
-	`about` TEXT NOT NULL,
-	`name` NVARCHAR (50) NOT NULL,
+	`about` TEXT,
+	`name` NVARCHAR (50),
 	`isAnonymous` BOOL NOT NULL DEFAULT False,
 
 	PRIMARY KEY (`id`),
