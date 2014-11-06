@@ -25,19 +25,22 @@ def get_thread_posts(cursor, thread, since, limit, sort, order):
     thread = to_number(thread, 'thread')
     since = optional(since, '2000-01-01 00:00:00')
     order = check_order(order, 'DESC')
-    limit = check_limit(limit)
 
-    sort = hierarchy_sort(sort)
+    sort_stmt = prepare_sort(sort, order)
+    limit_stmt = prepare_limit(limit)
+
     query = '''SELECT *
                FROM `Post`
                WHERE `thread` = %s AND `date` > %s
-               ORDER BY `date` {0} {1}
-               {2};
-            '''.format(order, sort, limit)
+               {0} {1};
+            '''.format(sort_stmt, limit_stmt)
 
     params = (thread, since)
     cursor.execute(query, params)
+
     posts = cursor.fetchall()
+    if sort == 'parent_tree':
+        get_child_posts(posts)
 
     for post in posts:
         prepare_post(post)

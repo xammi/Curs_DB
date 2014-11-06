@@ -31,19 +31,22 @@ def get_forum_by_slug(cursor, short_name):
 def get_forum_posts(cursor, forum, since, limit, sort, order):
     since = optional(since, '2000-01-01 00:00:00')
     order = check_order(order, 'DESC')
-    limit = check_limit(limit)
-    sort = hierarchy_sort(sort)
+
+    sort_stmt = prepare_sort(sort, order)
+    limit_stmt = prepare_limit(limit)
 
     query = '''SELECT *
                FROM `Post`
                WHERE `forum` = %s AND `date` > %s
-               ORDER BY `date` {0} {1}
-               {2};
-            '''.format(order, sort, limit)
+               {0} {1};
+            '''.format(sort_stmt, limit_stmt)
 
     params = (forum, since)
     cursor.execute(query, params)
+
     posts = cursor.fetchall()
+    if sort == 'parent_tree':
+        get_child_posts(posts)
 
     for post in posts:
         prepare_post(post)
@@ -54,7 +57,7 @@ def get_forum_posts(cursor, forum, since, limit, sort, order):
 def get_forum_threads(cursor, forum, since, limit, order):
     since = optional(since, '2000-01-01 00:00:00')
     order = check_order(order, 'DESC')
-    limit = check_limit(limit)
+    limit = prepare_limit(limit)
 
     query = '''SELECT *
                FROM `Thread`
@@ -76,7 +79,7 @@ def get_forum_threads(cursor, forum, since, limit, order):
 def get_forum_users(cursor, forum, limit, order, since_id):
     order = check_order(order, 'DESC')
     since_id = to_number(since_id, 'since_id')
-    limit = check_limit(limit)
+    limit = prepare_limit(limit)
 
     query = '''SELECT *
                FROM `User`

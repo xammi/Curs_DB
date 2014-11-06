@@ -40,7 +40,7 @@ def check_sort(string, default):
     return string
 
 
-def check_limit(limit):
+def prepare_limit(limit):
     limit = optional(limit, '')
     if limit == '':
         return ''
@@ -77,15 +77,19 @@ def prepare_user(user):
     return user
 
 
-def hierarchy_sort(sort):
+def prepare_sort(sort, order):
     sort = check_sort(sort, 'flat')
-    stmt = ''
+    stmt = ' ORDER BY `date` '
 
-    if sort is None or sort == 'flat':
-        stmt = ''
-    elif sort == 'tree':
-        stmt = ', `parent` ASC'
+    if sort == 'tree':
+        stmt += ' DESC, `path` '
     elif sort == 'parent_tree':
-        stmt = ', `parent` ASC'
+        #stmt = " AND `path` LIKE ''" + stmt
+        stmt += ' DESC, `path` '
 
+    stmt += order
     return stmt
+
+
+def get_child_posts(posts):
+    return posts
