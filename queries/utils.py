@@ -84,12 +84,24 @@ def prepare_sort(sort, order):
     if sort == 'tree':
         stmt += ' DESC, `path` '
     elif sort == 'parent_tree':
-        #stmt = " AND `path` LIKE ''" + stmt
+        stmt = " AND `path` LIKE ''" + stmt
         stmt += ' DESC, `path` '
 
     stmt += order
     return stmt
 
 
-def get_child_posts(posts):
-    return posts
+def get_child_posts(cursor, posts):
+    query = '''SELECT *
+               FROM `Post`
+               WHERE LEFT(`path`, '%.') = %s
+               ORDER BY `date` DESC;
+            '''
+
+    new_posts = []
+    for post in posts:
+        params = (str(post['id']),)
+        cursor.execute(query, params)
+        new_posts += (post + cursor.fetchall())
+
+    return new_posts

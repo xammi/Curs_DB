@@ -46,7 +46,7 @@ def get_forum_posts(cursor, forum, since, limit, sort, order):
 
     posts = cursor.fetchall()
     if sort == 'parent_tree':
-        get_child_posts(posts)
+        posts = get_child_posts(cursor, posts)
 
     for post in posts:
         prepare_post(post)
