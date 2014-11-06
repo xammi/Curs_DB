@@ -1,11 +1,10 @@
 __author__ = 'max'
 
-from utils import logic, optional, hierarchy_sort, NotFound
-from utils import prepare_user, prepare_post, prepare_thread
+from utils import *
 
 
 def set_user(cursor, username, about, name, email, is_anonymous):
-    is_anonymous = logic(is_anonymous, 'is_anonymous')
+    is_anonymous = to_bool(is_anonymous, 'is_anonymous')
     query = '''INSERT INTO `User` (`username`, `about`, `email`, `name`, `isAnonymous`)
                VALUES (%s, %s, %s, %s, %s);
             '''
@@ -94,22 +93,20 @@ def set_user_unfollow(cursor, follower, followee):
 
 
 def get_user_followers(cursor, user, limit, order, since_id):
-    limit = optional(limit, '')
-    order = optional(order, 'DESC')
-    since_id = optional(since_id, 0)
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    limit = check_limit(limit)
+    order = check_order(order, 'DESC')
+    since_id = to_number(since_id, 'since_id')
 
     query = '''SELECT *
                FROM `Follow` AS F
                JOIN `User` AS U ON F.`follower` = U.`email`
-               WHERE `followee` = '%s' AND U.`id` >= %s
-               ORDER BY `name` %s
-               %s;
-            ''' % (user, since_id, order, limit)
+               WHERE `followee` = %s AND U.`id` >= %s
+               ORDER BY `name` {0}
+               {1};
+            '''.format(order, limit)
+    params = (user, since_id)
+    cursor.execute(query, params)
 
-    cursor.execute(query)
     users = cursor.fetchall()
     for user in users:
         prepare_user(user)
@@ -118,22 +115,20 @@ def get_user_followers(cursor, user, limit, order, since_id):
 
 
 def get_user_following(cursor, user, limit, order, since_id):
-    limit = optional(limit, '')
-    order = optional(order, 'DESC')
-    since_id = optional(since_id, 0)
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    limit = check_limit(limit)
+    order = check_order(order, 'DESC')
+    since_id = to_number(since_id, 'since_id')
 
     query = '''SELECT *
                FROM `Follow` AS F
                JOIN `User` AS U ON F.`followee` = U.`email`
-               WHERE `follower` = '%s' AND U.`id` >= %s
-               ORDER BY `name` %s
-               %s;
-            ''' % (user, since_id, order, limit)
+               WHERE `follower` = %s AND U.`id` >= %s
+               ORDER BY `name` {0}
+               {1};
+            '''.format(order, limit)
+    params = (user, since_id)
+    cursor.execute(query, params)
 
-    cursor.execute(query)
     users = cursor.fetchall()
     for user in users:
         prepare_user(user)
@@ -143,23 +138,20 @@ def get_user_following(cursor, user, limit, order, since_id):
 
 def get_user_posts(cursor, user, since, limit, sort, order):
     since = optional(since, '2000-01-01 00:00:00')
-    order = optional(order, 'DESC')
-    limit = optional(limit, '')
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    order = check_order(order, 'DESC')
+    limit = check_limit(limit)
 
     sort = hierarchy_sort(sort)
     query = '''SELECT *
                FROM `Post`
-               WHERE `user` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s %s
-               %s;
-            ''' % (user, since, order, sort, limit)
+               WHERE `user` = %s AND `date` > %s
+               ORDER BY `date` {0} {1}
+               {2};
+            '''.format(order, sort, limit)
+    params = (user, since)
+    cursor.execute(query, params)
 
-    cursor.execute(query)
     posts = cursor.fetchall()
-
     for post in posts:
         prepare_post(post)
 
@@ -168,22 +160,19 @@ def get_user_posts(cursor, user, since, limit, sort, order):
 
 def get_user_threads(cursor, user, since, limit, order):
     since = optional(since, '2000-01-01 00:00:00')
-    order = optional(order, 'DESC')
-    limit = optional(limit, '')
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    order = check_order(order, 'DESC')
+    limit = check_limit(limit)
 
     query = '''SELECT *
                FROM `Thread`
-               WHERE `user` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s
-               %s;
-            ''' % (user, since, order, limit)
+               WHERE `user` = %s AND `date` > %s
+               ORDER BY `date` {0}
+               {1};
+            '''.format(order, limit)
+    params = (user, since)
+    cursor.execute(query, params)
 
-    cursor.execute(query)
     threads = cursor.fetchall()
-
     for thread in threads:
         prepare_thread(thread)
 

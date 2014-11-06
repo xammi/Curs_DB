@@ -17,7 +17,39 @@ class WrongType(Exception):
         self.msg = 'Parameter (%s) must be of %s type' % (param, right_type)
 
 
-def number(string, param):
+class WrongValue(Exception):
+    def __init__(self, param, value):
+        self.msg = 'Parameter (%s) has wrong value: %s' % (param, value)
+
+
+def check_order(string, default):
+    string = optional(string, default)
+    string = string.upper()
+
+    if string not in ['ASC', 'DESC']:
+        raise WrongValue('order', string)
+    return string
+
+
+def check_sort(string, default):
+    string = optional(string, default)
+    string = string.lower()
+
+    if string not in ['flat', 'tree', 'parent_tree']:
+        raise WrongValue('sort', string)
+    return string
+
+
+def check_limit(limit):
+    limit = optional(limit, '')
+    if limit == '':
+        return ''
+
+    num = to_number(limit, 'limit')
+    return 'LIMIT %d' % num
+
+
+def to_number(string, param):
     string = optional(string, '0')
     try:
         return int(string)
@@ -25,18 +57,12 @@ def number(string, param):
         raise WrongType(param, 'integer')
 
 
-def logic(string, param):
+def to_bool(string, param):
     string = optional(string, 'false')
     try:
         return bool(string)
     except ValueError:
         raise WrongType(param, 'bool')
-
-
-def none(obj):
-    if obj == 'None' or obj == 0:
-        return None
-    return obj
 
 
 def prepare_thread(thread):
@@ -47,16 +73,19 @@ def prepare_post(post):
     post['date'] = post['date'].strftime("%Y-%m-%d %H:%M:%S")
 
 
-def prepare_user(my_user):
-    pass
+def prepare_user(user):
+    return user
 
 
 def hierarchy_sort(sort):
-    if sort is None or sort == 'flat':
-        sort = ''
-    elif sort == 'tree':
-        sort = ', `parent` ASC'
-    elif sort == 'parent_tree':
-        sort = ', `parent` ASC'
+    sort = check_sort(sort, 'flat')
+    stmt = ''
 
-    return sort
+    if sort is None or sort == 'flat':
+        stmt = ''
+    elif sort == 'tree':
+        stmt = ', `parent` ASC'
+    elif sort == 'parent_tree':
+        stmt = ', `parent` ASC'
+
+    return stmt

@@ -1,11 +1,10 @@
 __author__ = 'max'
 
-from utils import number, logic, NotFound
-from utils import prepare_post
+from utils import *
 
 
 def get_post_by_id(cursor, post_id):
-    post_id = number(post_id, 'post_id')
+    post_id = to_number(post_id, 'post_id')
     query = '''SELECT *
                FROM `Post`
                WHERE `id` = %s
@@ -23,8 +22,8 @@ def get_post_by_id(cursor, post_id):
 
 
 def set_post(cursor, date, thread, message, user, forum, is_deleted):
-    is_deleted = logic(is_deleted, 'is_deleted')
-    thread = number(thread, 'thread')
+    is_deleted = to_bool(is_deleted, 'is_deleted')
+    thread = to_number(thread, 'thread')
 
     query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`, `isDeleted`)
                VALUES (%s, %s, %s, %s, %s, %s);
@@ -35,11 +34,11 @@ def set_post(cursor, date, thread, message, user, forum, is_deleted):
 
 
 def set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam):
-    is_approved = logic(is_approved, 'is_approved')
-    is_highlighted = logic(is_highlighted, 'is_highlighted')
-    is_edited = logic(is_edited, 'is_edited')
-    is_spam = logic(is_spam, 'is_spam')
-    post_id = number(post_id, 'post_id')
+    is_approved = to_bool(is_approved, 'is_approved')
+    is_highlighted = to_bool(is_highlighted, 'is_highlighted')
+    is_edited = to_bool(is_edited, 'is_edited')
+    is_spam = to_bool(is_spam, 'is_spam')
+    post_id = to_number(post_id, 'post_id')
 
     query = '''UPDATE `Post`
                SET `parent` = %s, `isApproved` = %s, `isHighlighted` = %s,
@@ -51,7 +50,7 @@ def set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited
 
 
 def set_post_deleted(cursor, post, logical):
-    post = number(post, 'post')
+    post = to_number(post, 'post')
     query = '''UPDATE `Post`
                SET `isDeleted` = {0}
                WHERE `id` = %s;
@@ -74,7 +73,7 @@ def set_post_deleted(cursor, post, logical):
 
 
 def set_post_message(cursor, post, message):
-    post = number(post, 'post')
+    post = to_number(post, 'post')
     query = '''UPDATE `Post`
                SET `message` = %s
                WHERE `id` = %s;
@@ -85,7 +84,7 @@ def set_post_message(cursor, post, message):
 
 
 def set_post_vote(cursor, post, vote):
-    post = number(post, 'post')
+    post = to_number(post, 'post')
 
     if vote < 0:
         column = 'dislikes'

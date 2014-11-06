@@ -1,11 +1,10 @@
 __author__ = 'max'
 
-from utils import number, logic, optional, hierarchy_sort, NotFound
-from utils import prepare_thread, prepare_post
+from utils import *
 
 
 def get_thread_by_id(cursor, thread_id):
-    thread_id = number(thread_id, 'thread_id')
+    thread_id = to_number(thread_id, 'thread_id')
     query = '''SELECT *
                FROM `Thread`
                WHERE `id` = %s
@@ -23,22 +22,21 @@ def get_thread_by_id(cursor, thread_id):
 
 
 def get_thread_posts(cursor, thread, since, limit, sort, order):
+    thread = to_number(thread, 'thread')
     since = optional(since, '2000-01-01 00:00:00')
-    order = optional(order, 'DESC')
-    limit = optional(limit, '')
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    order = check_order(order, 'DESC')
+    limit = check_limit(limit)
 
     sort = hierarchy_sort(sort)
     query = '''SELECT *
                FROM `Post`
-               WHERE `thread` = %s AND `date` > '%s'
-               ORDER BY `date` %s %s
-               %s;
-            ''' % (thread, since, order, sort, limit)
+               WHERE `thread` = %s AND `date` > %s
+               ORDER BY `date` {0} {1}
+               {2};
+            '''.format(order, sort, limit)
 
-    cursor.execute(query)
+    params = (thread, since)
+    cursor.execute(query, params)
     posts = cursor.fetchall()
 
     for post in posts:
@@ -47,7 +45,7 @@ def get_thread_posts(cursor, thread, since, limit, sort, order):
 
 
 def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted):
-    is_deleted = logic(is_deleted, 'is_deleted')
+    is_deleted = to_bool(is_deleted, 'is_deleted')
 
     query = '''INSERT INTO `Thread` (`forum`, `title`, `isClosed`, `user`,
                                      `date`, `message`, `slug`, `isDeleted`)
@@ -58,7 +56,7 @@ def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_de
 
 
 def set_thread_closed(cursor, thread, logical):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     query = '''UPDATE `Thread`
                SET `isClosed` = {0}
                WHERE `id` = %s;
@@ -68,7 +66,7 @@ def set_thread_closed(cursor, thread, logical):
 
 
 def set_thread_deleted(cursor, thread, logical):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     query = '''UPDATE `Thread`
                SET `isDeleted` = {0}
                WHERE `id` = %s;
@@ -84,7 +82,7 @@ def set_thread_deleted(cursor, thread, logical):
 
 
 def set_thread_message_slug(cursor, thread, message, slug):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     query = '''UPDATE `Thread`
                SET `message` = %s, `slug` = %s
                WHERE `id` = %s;
@@ -94,7 +92,7 @@ def set_thread_message_slug(cursor, thread, message, slug):
 
 
 def set_thread_vote(cursor, thread, vote):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     if vote < 0:
         column = 'dislikes'
         points = '- 1'
@@ -111,7 +109,7 @@ def set_thread_vote(cursor, thread, vote):
 
 
 def set_thread_subscribe(cursor, user, thread):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     query = '''INSERT INTO `Subscribe` (`thread`, `user`)
                VALUES (%s, %s);
             '''
@@ -120,7 +118,7 @@ def set_thread_subscribe(cursor, user, thread):
 
 
 def set_thread_unsubscribe(cursor, user, thread):
-    thread = number(thread, 'thread')
+    thread = to_number(thread, 'thread')
     query = '''DELETE FROM `Subscribe`
                WHERE `thread` = %s AND `user` = %s;
             '''
@@ -129,7 +127,7 @@ def set_thread_unsubscribe(cursor, user, thread):
 
 
 def get_subscribe_by_id(cursor, subs_id):
-    subs_id = number(subs_id, 'subs_id')
+    subs_id = to_number(subs_id, 'subs_id')
     query = '''SELECT *
                FROM `Subscribe`
                WHERE `id` = %s;

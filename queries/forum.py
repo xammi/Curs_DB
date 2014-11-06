@@ -1,7 +1,6 @@
 __author__ = 'max'
 
-from utils import optional, NotFound, hierarchy_sort
-from utils import prepare_post, prepare_thread, prepare_user
+from utils import *
 
 
 def set_forum(cursor, name, short_name, user):
@@ -31,21 +30,19 @@ def get_forum_by_slug(cursor, short_name):
 
 def get_forum_posts(cursor, forum, since, limit, sort, order):
     since = optional(since, '2000-01-01 00:00:00')
-    order = optional(order, 'DESC')
-    limit = optional(limit, '')
+    order = check_order(order, 'DESC')
+    limit = check_limit(limit)
     sort = hierarchy_sort(sort)
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
 
     query = '''SELECT *
                FROM `Post`
-               WHERE `forum` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s %s
-               %s;
-            ''' % (forum, since, order, sort, limit)
+               WHERE `forum` = %s AND `date` > %s
+               ORDER BY `date` {0} {1}
+               {2};
+            '''.format(order, sort, limit)
 
-    cursor.execute(query)
+    params = (forum, since)
+    cursor.execute(query, params)
     posts = cursor.fetchall()
 
     for post in posts:
@@ -56,20 +53,18 @@ def get_forum_posts(cursor, forum, since, limit, sort, order):
 
 def get_forum_threads(cursor, forum, since, limit, order):
     since = optional(since, '2000-01-01 00:00:00')
-    order = optional(order, 'DESC')
-    limit = optional(limit, '')
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    order = check_order(order, 'DESC')
+    limit = check_limit(limit)
 
     query = '''SELECT *
                FROM `Thread`
-               WHERE `forum` = '%s' AND `date` > '%s'
-               ORDER BY `date` %s
-               %s;
-            ''' % (forum, since, order, limit)
+               WHERE `forum` = %s AND `date` > %s
+               ORDER BY `date` {0}
+               {1};
+            '''.format(order, limit)
 
-    cursor.execute(query)
+    params = (forum, since)
+    cursor.execute(query, params)
     threads = cursor.fetchall()
 
     for thread in threads:
@@ -79,23 +74,22 @@ def get_forum_threads(cursor, forum, since, limit, order):
 
 
 def get_forum_users(cursor, forum, limit, order, since_id):
-    order = optional(order, 'DESC')
-    since_id = optional(since_id, '0')
-    limit = optional(limit, '')
-
-    if limit != '':
-        limit = 'LIMIT ' + limit
+    order = check_order(order, 'DESC')
+    since_id = to_number(since_id, 'since_id')
+    limit = check_limit(limit)
 
     query = '''SELECT *
                FROM `User`
                WHERE `User`.`id` >= %s AND EXISTS (
-                   SELECT * FROM `Post` WHERE `forum` = '%s' AND `user` = `User`.`email`
+                   SELECT * FROM `Post` WHERE `forum` = %s AND `user` = `User`.`email`
                )
-               ORDER BY `User`.`name` %s
-               %s;
-            ''' % (since_id, forum, order, limit)
+               ORDER BY `User`.`name` {0}
+               {1};
+            '''.format(order, limit)
 
-    cursor.execute(query)
+    params = (since_id, forum)
+    cursor.execute(query, params)
+
     users = cursor.fetchall()
     for user in users:
         prepare_user(user)

@@ -1,6 +1,6 @@
 __author__ = 'max'
 
-from queries.utils import WrongType, NotFound, optional
+from queries.utils import WrongType, WrongValue, NotFound, optional
 from flask import jsonify
 from mysql.connector.errors import OperationalError as FailedConstraint
 from mysql.connector.cursor import MySQLCursor
@@ -38,7 +38,7 @@ class exceptions():
         try:
             return self.function()
 
-        except (RequiredNone, WrongType) as e:
+        except (RequiredNone, WrongType, WrongValue) as e:
             return jsonify({'code': INVALID_QUERY, 'response': e.msg})
 
         except (FailedConstraint, WrongRelated) as e:
