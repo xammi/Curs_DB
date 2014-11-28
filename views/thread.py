@@ -12,7 +12,7 @@ app = Blueprint('thread', __name__)
 
 @app.route("/close/", methods=["POST"])
 @exceptions
-def thread_close():
+def thread_close(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -25,7 +25,7 @@ def thread_close():
 
 @app.route("/create/", methods=["POST"])
 @exceptions
-def thread_create():
+def thread_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum', 'title', 'isClosed', 'user', 'date', 'message', 'slug']
@@ -43,7 +43,7 @@ def thread_create():
 
 @app.route("/details/", methods=["GET"])
 @exceptions
-def thread_details():
+def thread_details(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -63,7 +63,7 @@ def thread_details():
 
 @app.route("/list/", methods=["GET"])
 @exceptions
-def thread_list():
+def thread_list(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     opt_args = ['user', 'forum', 'since', 'limit', 'order']
@@ -83,7 +83,7 @@ def thread_list():
 
 @app.route("/listPosts/", methods=["GET"])
 @exceptions
-def thread_list_posts():
+def thread_list_posts(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -98,7 +98,7 @@ def thread_list_posts():
 
 @app.route("/open/", methods=["POST"])
 @exceptions
-def thread_open():
+def thread_open(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -111,7 +111,7 @@ def thread_open():
 
 @app.route("/remove/", methods=["POST"])
 @exceptions
-def thread_remove():
+def thread_remove(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -124,7 +124,7 @@ def thread_remove():
 
 @app.route("/restore/", methods=["POST"])
 @exceptions
-def thread_restore():
+def thread_restore(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
@@ -137,7 +137,7 @@ def thread_restore():
 
 @app.route("/subscribe/", methods=["POST"])
 @exceptions
-def thread_subscribe():
+def thread_subscribe(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user', 'thread']
@@ -152,7 +152,7 @@ def thread_subscribe():
 
 @app.route("/unsubscribe/", methods=["POST"])
 @exceptions
-def thread_unsubscribe():
+def thread_unsubscribe(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user', 'thread']
@@ -167,7 +167,7 @@ def thread_unsubscribe():
 
 @app.route("/update/", methods=["POST"])
 @exceptions
-def thread_update():
+def thread_update(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['message', 'slug', 'thread']
@@ -182,7 +182,7 @@ def thread_update():
 
 @app.route("/vote/", methods=["POST"])
 @exceptions
-def thread_vote():
+def thread_vote(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['vote', 'thread']

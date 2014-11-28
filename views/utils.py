@@ -4,11 +4,17 @@ from queries.utils import WrongType, WrongValue, NotFound, optional
 from flask import jsonify
 from mysql.connector.errors import OperationalError as FailedConstraint
 from mysql.connector.cursor import MySQLCursor
-import mysql.connector
+from mysql.connector.pooling import MySQLConnectionPool
 
 
-connect = mysql.connector.connect(user='root', password='22061994',
-                                  host='127.0.0.1', database='forum_db')
+dbconfig = {
+    'user': 'root',
+    'password': '22061994',
+    'host': '127.0.0.1',
+    'database': 'forum_db'
+}
+
+pool = MySQLConnectionPool(pool_name="mypool", pool_size=10, **dbconfig)
 
 # codes of response
 OK = 0
@@ -35,8 +41,9 @@ class exceptions():
         self.__name__ = function.__name__
 
     def __call__(self):
+        connect = pool.get_connection()
         try:
-            return self.function()
+            return self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:
             return jsonify({'code': INVALID_QUERY, 'response': e.msg})
@@ -49,6 +56,8 @@ class exceptions():
 
         except Exception as e:
             return jsonify({'code': UNKNOWN, 'response': e.message})
+        finally:
+            connect.close()
 
 
 class MySQLCursorDict(MySQLCursor):

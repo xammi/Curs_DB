@@ -12,7 +12,7 @@ app = Blueprint('forum', __name__)
 
 @app.route("/create/", methods=['POST'])
 @exceptions
-def forum_create():
+def forum_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['name', 'short_name', 'user']
@@ -30,7 +30,7 @@ def forum_create():
 
 @app.route("/details/", methods=['GET'])
 @exceptions
-def forum_details():
+def forum_details(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
@@ -47,7 +47,7 @@ def forum_details():
 
 @app.route("/listPosts/", methods=['GET'])
 @exceptions
-def forum_posts():
+def forum_posts(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
@@ -75,7 +75,7 @@ def forum_posts():
 
 @app.route("/listThreads/", methods=["GET"])
 @exceptions
-def forum_threads():
+def forum_threads(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']
@@ -100,7 +100,7 @@ def forum_threads():
 
 @app.route("/listUsers/", methods=["GET"])
 @exceptions
-def forum_users():
+def forum_users(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum']

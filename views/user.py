@@ -10,7 +10,7 @@ app = Blueprint('user', __name__)
 
 @app.route("/create/", methods=["POST"])
 @exceptions
-def user_create():
+def user_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['email']
@@ -35,7 +35,7 @@ def user_create():
 
 @app.route("/details/", methods=["GET"])
 @exceptions
-def user_details():
+def user_details(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user']
@@ -47,7 +47,7 @@ def user_details():
 
 @app.route("/follow/", methods=["POST"])
 @exceptions
-def user_follow():
+def user_follow(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['follower', 'followee']
@@ -62,7 +62,7 @@ def user_follow():
 
 @app.route("/listFollowers/", methods=["GET"])
 @exceptions
-def user_list_followers():
+def user_list_followers(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user']
@@ -79,7 +79,7 @@ def user_list_followers():
 
 @app.route("/listFollowing/", methods=["GET"])
 @exceptions
-def user_list_following():
+def user_list_following(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user']
@@ -96,7 +96,7 @@ def user_list_following():
 
 @app.route("/listPosts/", methods=["GET"])
 @exceptions
-def user_list_posts():
+def user_list_posts(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user']
@@ -111,7 +111,7 @@ def user_list_posts():
 
 @app.route("/unfollow/", methods=["POST"])
 @exceptions
-def user_unfollow():
+def user_unfollow(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['follower', 'followee']
@@ -126,7 +126,7 @@ def user_unfollow():
 
 @app.route("/updateProfile/", methods=["POST"])
 @exceptions
-def user_update_profile():
+def user_update_profile(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['about', 'user', 'name']

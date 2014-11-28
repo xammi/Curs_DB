@@ -13,7 +13,7 @@ app = Blueprint('post', __name__)
 
 @app.route("/create/", methods=["POST"])
 @exceptions
-def post_create():
+def post_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['date', 'thread', 'message', 'user', 'forum']
@@ -32,7 +32,7 @@ def post_create():
 
 @app.route("/details/", methods=["GET"])
 @exceptions
-def post_details():
+def post_details(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['post']
@@ -55,7 +55,7 @@ def post_details():
 
 @app.route("/list/", methods=["GET"])
 @exceptions
-def post_list():
+def post_list(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     opt_args = ['forum', 'thread', 'since', 'limit', 'sort', 'order']
@@ -75,7 +75,7 @@ def post_list():
 
 @app.route("/remove/", methods=["POST"])
 @exceptions
-def post_remove():
+def post_remove(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post']
     post = extract_req(request.json, req_args)
@@ -87,7 +87,7 @@ def post_remove():
 
 @app.route("/restore/", methods=["POST"])
 @exceptions
-def post_restore():
+def post_restore(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post']
     post = extract_req(request.json, req_args)
@@ -99,7 +99,7 @@ def post_restore():
 
 @app.route("/update/", methods=["POST"])
 @exceptions
-def post_update():
+def post_update(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post', 'message']
     post, message = extract_req(request.json, req_args)
@@ -113,7 +113,7 @@ def post_update():
 
 @app.route("/vote/", methods=["POST"])
 @exceptions
-def post_vote():
+def post_vote(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post', 'vote']
     post, vote = extract_req(request.json, req_args)
