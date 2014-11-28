@@ -133,6 +133,7 @@ def user_update_profile(connect):
     about, user, name = extract_req(request.json, req_args)
 
     set_user_details(cursor, user, name, about)
-    user = get_user_by_email(cursor, user)
+    connect.commit();
 
+    user = get_user_by_email(cursor, user)
     return response_ok(user)
