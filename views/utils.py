@@ -1,7 +1,7 @@
 __author__ = 'max'
 
 from queries.utils import WrongType, WrongValue, NotFound, optional
-from flask import jsonify, make_response
+from flask import jsonify, make_response, request
 from mysql.connector.errors import OperationalError as FailedConstraint
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.pooling import MySQLConnectionPool
@@ -43,6 +43,7 @@ class exceptions():
     def __call__(self):
         connect = pool.get_connection()
         try:
+            dummy = request.form
             return self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:
@@ -55,7 +56,7 @@ class exceptions():
             return response_error(QUIRED_NOT_FOUND, e.msg)
 
         except Exception as e:
-            return response_error(UNKNOWN, e.msg)
+            return response_error(UNKNOWN, e.message)
         finally:
             connect.close()
 
