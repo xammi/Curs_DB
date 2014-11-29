@@ -16,7 +16,7 @@ def thread_close(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
-    thread = extract_req(request.json, req_args)
+    thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_closed(cursor, thread, 'True')
     connect.commit()
@@ -29,9 +29,9 @@ def thread_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['forum', 'title', 'isClosed', 'user', 'date', 'message', 'slug']
-    forum, title, is_closed, user, date, message, slug = extract_req(request.json, req_args)
+    forum, title, is_closed, user, date, message, slug = extract_req(request.get_json(force=True), req_args)
     opt_args = ['isDeleted']
-    is_deleted = extract_opt(request.json, opt_args)
+    is_deleted = extract_opt(request.get_json(force=True), opt_args)
 
     set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted)
     thread_id = cursor.lastrowid
@@ -102,7 +102,7 @@ def thread_open(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
-    thread = extract_req(request.json, req_args)
+    thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_closed(cursor, thread, 'False')
     connect.commit()
@@ -115,7 +115,7 @@ def thread_remove(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
-    thread = extract_req(request.json, req_args)
+    thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_deleted(cursor, thread, 'True')
     connect.commit()
@@ -128,7 +128,7 @@ def thread_restore(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['thread']
-    thread = extract_req(request.json, req_args)
+    thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_deleted(cursor, thread, 'False')
     connect.commit()
@@ -141,7 +141,7 @@ def thread_subscribe(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user', 'thread']
-    user, thread = extract_req(request.json, req_args)
+    user, thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_subscribe(cursor, user, thread)
     connect.commit()
@@ -156,7 +156,7 @@ def thread_unsubscribe(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['user', 'thread']
-    user, thread = extract_req(request.json, req_args)
+    user, thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_unsubscribe(cursor, user, thread)
     connect.commit()
@@ -171,7 +171,7 @@ def thread_update(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['message', 'slug', 'thread']
-    message, slug, thread = extract_req(request.json, req_args)
+    message, slug, thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_message_slug(cursor, thread, message, slug)
     connect.commit()
@@ -186,7 +186,7 @@ def thread_vote(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['vote', 'thread']
-    vote, thread = extract_req(request.json, req_args)
+    vote, thread = extract_req(request.get_json(force=True), req_args)
 
     set_thread_vote(cursor, thread, vote)
     connect.commit()

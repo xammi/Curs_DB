@@ -16,12 +16,15 @@ def user_create(connect):
     req_args = ['email']
     cond_args = ['username', 'about', 'name']
     opt_args = ['isAnonymous']
-    email = extract_req(request.json, req_args)
-    username, about, name = extract_opt(request.json, cond_args)
-    is_anonymous = extract_opt(request.json, opt_args)
+
+    json = request.get_json(force=True)
+
+    email = extract_req(json, req_args)
+    username, about, name = extract_opt(json, cond_args)
+    is_anonymous = extract_opt(json, opt_args)
 
     if is_anonymous == 'True':
-        extract_req(request.json, cond_args)
+        extract_req(json, cond_args)
 
     try:
         set_user(cursor, username, about, name, email, is_anonymous)
@@ -51,7 +54,7 @@ def user_follow(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['follower', 'followee']
-    follower, followee = extract_req(request.json, req_args)
+    follower, followee = extract_req(request.get_json(force=True), req_args)
 
     set_user_follow(cursor, follower, followee)
     connect.commit()
@@ -115,7 +118,7 @@ def user_unfollow(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['follower', 'followee']
-    follower, followee = extract_req(request.json, req_args)
+    follower, followee = extract_req(request.get_json(force=True), req_args)
 
     set_user_unfollow(cursor, follower, followee)
     connect.commit()
@@ -130,10 +133,10 @@ def user_update_profile(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['about', 'user', 'name']
-    about, user, name = extract_req(request.json, req_args)
+    about, user, name = extract_req(request.get_json(force=True), req_args)
 
     set_user_details(cursor, user, name, about)
-    connect.commit();
+    connect.commit()
 
     user = get_user_by_email(cursor, user)
     return response_ok(user)

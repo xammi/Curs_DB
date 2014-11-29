@@ -11,7 +11,7 @@ app = Blueprint('clear', __name__)
 @exceptions
 def clear(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
-    json = request.json
+    json = request.get_json(force=True)
 
     clear_all(cursor)
     connect.commit()

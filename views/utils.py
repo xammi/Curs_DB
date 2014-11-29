@@ -43,7 +43,6 @@ class exceptions():
     def __call__(self):
         connect = pool.get_connection()
         try:
-            dummy = request.form
             return self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:

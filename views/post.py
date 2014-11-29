@@ -18,8 +18,11 @@ def post_create(connect):
 
     req_args = ['date', 'thread', 'message', 'user', 'forum']
     opt_args = ['parent', 'isApproved', 'isHighlighted', 'isEdited', 'isSpam', 'isDeleted']
-    date, thread, message, user, forum = extract_req(request.json, req_args)
-    parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(request.json, opt_args)
+
+    json = request.get_json(force=True)
+
+    date, thread, message, user, forum = extract_req(json, req_args)
+    parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(json, opt_args)
 
     set_post(cursor, date, thread, message, user, forum, is_deleted)
     post_id = cursor.lastrowid
@@ -78,7 +81,7 @@ def post_list(connect):
 def post_remove(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post']
-    post = extract_req(request.json, req_args)
+    post = extract_req(request.get_json(force=True), req_args)
 
     set_post_deleted(cursor, post, 'True')
     connect.commit()
@@ -90,7 +93,7 @@ def post_remove(connect):
 def post_restore(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post']
-    post = extract_req(request.json, req_args)
+    post = extract_req(request.get_json(force=True), req_args)
 
     set_post_deleted(cursor, post, 'False')
     connect.commit()
@@ -102,7 +105,7 @@ def post_restore(connect):
 def post_update(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post', 'message']
-    post, message = extract_req(request.json, req_args)
+    post, message = extract_req(request.get_json(force=True), req_args)
 
     set_post_message(cursor, post, message)
     connect.commit()
@@ -116,7 +119,7 @@ def post_update(connect):
 def post_vote(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
     req_args = ['post', 'vote']
-    post, vote = extract_req(request.json, req_args)
+    post, vote = extract_req(request.get_json(force=True), req_args)
 
     set_post_vote(cursor, post, vote)
     connect.commit()

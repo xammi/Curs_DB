@@ -16,7 +16,7 @@ def forum_create(connect):
     cursor = connect.cursor(cursor_class=MySQLCursorDict)
 
     req_args = ['name', 'short_name', 'user']
-    name, short_name, user = extract_req(request.json, req_args)
+    name, short_name, user = extract_req(request.get_json(force=True), req_args)
 
     try:
         set_forum(cursor, name, short_name, user)
