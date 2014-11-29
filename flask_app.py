@@ -33,4 +33,4 @@ if __name__ == "__main__":
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
 
-    app.run(debug=True)
+    app.run(debug=False)
