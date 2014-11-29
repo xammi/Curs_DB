@@ -70,11 +70,18 @@ def set_thread_closed(cursor, thread, logical):
 
 def set_thread_deleted(cursor, thread, logical):
     thread = to_number(thread, 'thread')
-    query = '''UPDATE `Thread`
-               SET `isDeleted` = {0}
-               WHERE `id` = %s;
-            '''.format(logical)
     params = (thread,)
+
+    posts = 0
+    if logical == 'False':
+        query = '''SELECT count(*) FROM `Post` WHERE `thread` = %s;'''
+        cursor.execute(query, params)
+        posts = cursor.fetchone()
+
+    query = '''UPDATE `Thread`
+               SET `isDeleted` = {0}, `posts` = {1}
+               WHERE `id` = %s;
+            '''.format(logical, str(posts))
     cursor.execute(query, params)
 
     query = '''UPDATE `Post`
