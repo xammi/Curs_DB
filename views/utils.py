@@ -1,7 +1,7 @@
 __author__ = 'max'
 
 from queries.utils import WrongType, WrongValue, NotFound, optional
-from flask import jsonify
+from flask import jsonify, make_response
 from mysql.connector.errors import OperationalError as FailedConstraint
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.pooling import MySQLConnectionPool
@@ -46,16 +46,16 @@ class exceptions():
             return self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:
-            return jsonify({'code': INVALID_QUERY, 'response': e.msg})
+            return response_error(INVALID_QUERY, e.msg)
 
         except (FailedConstraint, WrongRelated) as e:
-            return jsonify({'code': UNCORRECT_QUERY, 'response': e.msg})
+            return response_error(UNCORRECT_QUERY, e.msg)
 
         except NotFound as e:
-            return jsonify({'code': QUIRED_NOT_FOUND, 'response': e.msg})
+            return response_error(QUIRED_NOT_FOUND, e.msg)
 
         except Exception as e:
-            return jsonify({'code': UNKNOWN, 'response': e.message})
+            return response_error(UNKNOWN, e.msg)
         finally:
             connect.close()
 
@@ -94,5 +94,15 @@ def extract_list(store, arg, awaited):
     return related
 
 
+def response_error(code, msg):
+    json = jsonify({'code': code, 'response': msg})
+    response = make_response(json)
+    response.headers['Content-Type'] = "application/json"
+    return response
+
+
 def response_ok(obj):
-    return jsonify({'code': OK, 'response': obj})
+    json = jsonify({'code': OK, 'response': obj})
+    response = make_response(json)
+    response.headers['Content-Type'] = "application/json"
+    return response
