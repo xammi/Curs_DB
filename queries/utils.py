@@ -58,7 +58,7 @@ def to_number(string, param):
 
 
 def to_bool(string, param):
-    string = optional(string, 'false')
+    string = optional(string, 'False')
     try:
         return bool(string)
     except ValueError:

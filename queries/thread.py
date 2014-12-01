@@ -57,6 +57,12 @@ def set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_de
     params = (forum, title, is_closed, user, date, message, slug, is_deleted)
     cursor.execute(query, params)
 
+    # thread = {'forum': forum, 'title': title, 'isClosed': is_closed,
+    #           'user': user, 'date': date, 'message': message, 'slug': slug, 'isDeleted': is_deleted,
+    #           'dislikes': 0, 'likes': 0, 'points': 0, 'posts': 0}
+    # prepare_thread(thread)
+    # return thread
+
 
 def set_thread_closed(cursor, thread, logical):
     thread = to_number(thread, 'thread')

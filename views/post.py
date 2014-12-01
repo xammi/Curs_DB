@@ -2,6 +2,7 @@ __author__ = 'max'
 
 from flask import Blueprint, request
 from queries.post import *
+from mysql.connector.errors import IntegrityError as IsDuplicate
 from queries.forum import get_forum_by_slug, get_forum_posts
 from queries.user import get_user_by_email
 from queries.thread import get_thread_by_id, get_thread_posts
@@ -24,9 +25,8 @@ def post_create(connect):
     date, thread, message, user, forum = extract_req(json, req_args)
     parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(json, opt_args)
 
-    set_post(cursor, date, thread, message, user, forum, is_deleted)
+    set_post(cursor, date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam)
     post_id = cursor.lastrowid
-    set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam)
     connect.commit()
 
     post = get_post_by_id(cursor, post_id)

@@ -32,7 +32,8 @@ def user_create(connect):
     except IsDuplicate:
         return jsonify({'code': USER_EXISTED, 'response': "User already exists"})
 
-    user = get_user_by_email(cursor, email)
+    user_id = cursor.lastrowid
+    user = get_user_pattern(user_id, username, about, name, email, is_anonymous)
     return response_ok(user)
 
 

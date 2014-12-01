@@ -12,6 +12,11 @@ def set_forum(cursor, name, short_name, user):
     cursor.execute(query, params)
 
 
+def get_forum_pattern(forum_id, name, short_name, user):
+    forum = {'id': forum_id, 'name': name, 'short_name': short_name, 'user': user}
+    return forum
+
+
 def get_forum_by_slug(cursor, short_name):
     query = '''SELECT *
                FROM `Forum`

@@ -67,6 +67,15 @@ def get_user_by_email(cursor, email):
     return user
 
 
+def get_user_pattern(user_id, username, about, name, email, is_anonymous):
+    is_anonymous = to_bool(is_anonymous, 'is_anonymous')
+    user = {'id': user_id, 'username': username, 'about': about,
+            'name': name, 'email': email, 'isAnonymous': is_anonymous,
+            'followers': [], 'following': [], 'subscriptions': []}
+    prepare_user(user)
+    return user
+
+
 def set_user_details(cursor, user, name, about):
     query = '''UPDATE `User`
                SET `name` = %s, `about` = %s

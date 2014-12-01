@@ -24,7 +24,8 @@ def forum_create(connect):
     except IsDuplicate:
         pass
 
-    forum = get_forum_by_slug(cursor, short_name)
+    forum_id = cursor.lastrowid
+    forum = get_forum_pattern(forum_id, name, short_name, user)
     return response_ok(forum)
 
 

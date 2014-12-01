@@ -21,32 +21,27 @@ def get_post_by_id(cursor, post_id):
     return post
 
 
-def set_post(cursor, date, thread, message, user, forum, is_deleted):
+def set_post(cursor, date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam):
     is_deleted = to_bool(is_deleted, 'is_deleted')
     thread = to_number(thread, 'thread')
 
-    query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`, `isDeleted`)
-               VALUES (%s, %s, %s, %s, %s, %s);
-            '''
-
-    params = (date, thread, message, user, forum, is_deleted)
-    cursor.execute(query, params)
-
-
-def set_post_opt(cursor, post_id, parent, is_approved, is_highlighted, is_edited, is_spam):
     is_approved = to_bool(is_approved, 'is_approved')
     is_highlighted = to_bool(is_highlighted, 'is_highlighted')
     is_edited = to_bool(is_edited, 'is_edited')
     is_spam = to_bool(is_spam, 'is_spam')
-    post_id = to_number(post_id, 'post_id')
 
-    query = '''UPDATE `Post`
-               SET `parent` = %s, `isApproved` = %s, `isHighlighted` = %s,
-                   `isEdited` = %s, `isSpam` = %s
-               WHERE `id` = %s;
+    query = '''INSERT INTO `Post` (`date`, `thread`, `message`, `user`, `forum`, `isDeleted`, `parent`, `isApproved`, `isHighlighted`, `isEdited`, `isSpam`)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             '''
-    params = (parent, is_approved, is_highlighted, is_edited, is_spam, post_id)
+
+    params = (date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam)
     cursor.execute(query, params)
+
+    # post = {'date': date, 'thread': thread, 'message': message, 'user': user, 'forum': forum,
+    #         'isDeleted': is_deleted, 'parent': parent, 'isApproved': is_approved, 'isHighlighted': is_highlighted,
+    #         'isEdited': is_edited, 'isSpam': is_spam, 'dislikes': 0, 'likes': 0, 'points': 0}
+    # prepare_post(post)
+    # return post
 
 
 def set_post_deleted(cursor, post, logical):
