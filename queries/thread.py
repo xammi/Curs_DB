@@ -73,7 +73,7 @@ def set_thread_deleted(cursor, thread, logical):
     params = (thread,)
 
     posts = 0
-    if not bool(logical):
+    if logical == 'False':
         query = '''SELECT count(*) FROM `Post` WHERE `thread` = %s;'''
         cursor.execute(query, params)
         posts = cursor.fetchone()
@@ -81,7 +81,7 @@ def set_thread_deleted(cursor, thread, logical):
     query = '''UPDATE `Thread`
                SET `isDeleted` = {0}, `posts` = {1}
                WHERE `id` = %s;
-            '''.format(logical, posts)
+            '''.format(logical, str(posts))
     cursor.execute(query, params)
 
     query = '''UPDATE `Post`
