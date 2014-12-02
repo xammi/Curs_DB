@@ -37,11 +37,10 @@ def set_post(cursor, date, thread, message, user, forum, is_deleted, parent, is_
     params = (date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam)
     cursor.execute(query, params)
 
-    # post = {'date': date, 'thread': thread, 'message': message, 'user': user, 'forum': forum,
-    #         'isDeleted': is_deleted, 'parent': parent, 'isApproved': is_approved, 'isHighlighted': is_highlighted,
-    #         'isEdited': is_edited, 'isSpam': is_spam, 'dislikes': 0, 'likes': 0, 'points': 0}
-    # prepare_post(post)
-    # return post
+    post = {'date': date, 'thread': thread, 'message': message, 'user': user, 'forum': forum,
+            'isDeleted': is_deleted, 'parent': parent, 'isApproved': is_approved, 'isHighlighted': is_highlighted,
+            'isEdited': is_edited, 'isSpam': is_spam, 'dislikes': 0, 'likes': 0, 'points': 0, 'path': ''}
+    return post
 
 
 def set_post_deleted(cursor, post, logical):

@@ -25,11 +25,12 @@ def post_create(connect):
     date, thread, message, user, forum = extract_req(json, req_args)
     parent, is_approved, is_highlighted, is_edited, is_spam, is_deleted = extract_opt(json, opt_args)
 
-    set_post(cursor, date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam)
+    post = set_post(cursor, date, thread, message, user, forum, is_deleted, parent, is_approved, is_highlighted, is_edited, is_spam)
     post_id = cursor.lastrowid
     connect.commit()
 
-    post = get_post_by_id(cursor, post_id)
+    post['id'] = post_id
+    #post_orig = get_post_by_id(cursor, post_id)
     return response_ok(post)
 
 

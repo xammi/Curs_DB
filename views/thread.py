@@ -34,11 +34,11 @@ def thread_create(connect):
     opt_args = ['isDeleted']
     is_deleted = extract_opt(request.get_json(force=True), opt_args)
 
-    set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted)
+    thread = set_thread(cursor, forum, title, is_closed, user, date, message, slug, is_deleted)
     thread_id = cursor.lastrowid
     connect.commit()
 
-    thread = get_thread_by_id(cursor, thread_id)
+    thread['id'] = thread_id
     return response_ok(thread)
 
 
