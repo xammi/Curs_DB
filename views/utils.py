@@ -5,6 +5,7 @@ from flask import jsonify, make_response, request
 from mysql.connector.errors import OperationalError as FailedConstraint
 from mysql.connector.cursor import MySQLCursor
 from mysql.connector.pooling import MySQLConnectionPool
+import sys
 
 
 dbconfig = {
@@ -54,8 +55,9 @@ class exceptions():
         except NotFound as e:
             return response_error(QUIRED_NOT_FOUND, e.msg)
 
-        except Exception as e:
-            return response_error(UNKNOWN, e.message)
+        except:
+            return response_error(UNKNOWN, sys.exc_info()[0])
+
         finally:
             connect.close()
 
