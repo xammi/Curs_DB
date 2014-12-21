@@ -1,6 +1,6 @@
 __author__ = 'max'
 
-from utils import *
+from queries.utils import *
 
 
 def set_forum(cursor, name, short_name, user):

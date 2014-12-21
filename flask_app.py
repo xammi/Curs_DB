@@ -9,8 +9,8 @@ from views.post import app as post_app
 from views.user import app as user_app
 from views.thread import app as thread_app
 
-import logging
-from logging.handlers import RotatingFileHandler
+# import logging
+# from logging.handlers import RotatingFileHandler
 
 API_PREFIX = "/db/api"
 
@@ -29,8 +29,8 @@ def tester():
 
 
 if __name__ == "__main__":
-    handler = RotatingFileHandler('logs/flask.log', maxBytes=10000, backupCount=1)
-    handler.setLevel(logging.INFO)
-    app.logger.addHandler(handler)
+    # handler = RotatingFileHandler('logs/flask.log', maxBytes=10000, backupCount=1)
+    # handler.setLevel(logging.INFO)
+    # app.logger.addHandler(handler)
 
     app.run(debug=False)

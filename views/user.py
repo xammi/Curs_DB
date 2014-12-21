@@ -2,8 +2,9 @@ __author__ = 'max'
 
 from flask import Blueprint, request
 from mysql.connector.errors import IntegrityError as IsDuplicate
+from mysql.connector.cursor import MySQLCursorDict
 from queries.user import *
-from utils import *
+from views.utils import *
 
 app = Blueprint('user', __name__)
 

@@ -1,6 +1,6 @@
 __author__ = 'max'
 
-from utils import *
+from queries.utils import *
 
 
 def get_post_by_id(cursor, post_id):

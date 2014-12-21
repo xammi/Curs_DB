@@ -4,9 +4,9 @@ from flask import Blueprint, request
 from queries.thread import *
 from queries.forum import get_forum_by_slug, get_forum_threads
 from queries.user import get_user_by_email, get_user_threads
-from mysql.connector.errors import IntegrityError as IsDuplicate
+from mysql.connector.cursor import MySQLCursorDict
 from queries.thread import get_thread_by_id, get_thread_posts
-from utils import *
+from views.utils import *
 
 app = Blueprint('thread', __name__)
 

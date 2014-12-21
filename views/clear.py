@@ -1,7 +1,8 @@
 __author__ = 'max'
 
 from flask import Blueprint, request
-from utils import exceptions, MySQLCursorDict, response_ok
+from views.utils import exceptions, response_ok
+from mysql.connector.cursor import MySQLCursorDict
 from queries.clear import clear_all
 
 app = Blueprint('clear', __name__)

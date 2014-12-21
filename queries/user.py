@@ -1,6 +1,6 @@
 __author__ = 'max'
 
-from utils import *
+from queries.utils import *
 
 
 def set_user(cursor, username, about, name, email, is_anonymous):

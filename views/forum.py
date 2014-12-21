@@ -2,10 +2,11 @@ __author__ = 'max'
 
 from flask import Blueprint, request
 from mysql.connector.errors import IntegrityError as IsDuplicate
+from mysql.connector.cursor import MySQLCursorDict
 from queries.forum import *
 from queries.user import get_user_by_email, complete_user
 from queries.thread import get_thread_by_id
-from utils import *
+from views.utils import *
 
 app = Blueprint('forum', __name__)
 
