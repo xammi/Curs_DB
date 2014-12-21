@@ -105,3 +105,7 @@ def get_child_posts(cursor, posts):
         new_posts += (post + cursor.fetchall())
 
     return new_posts
+
+
+def val_list(cont, key):
+    return [item[key] for item in cont]

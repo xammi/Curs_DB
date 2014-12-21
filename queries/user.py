@@ -19,7 +19,8 @@ def get_followers_list(cursor, email):
             '''
     params = (email,)
     cursor.execute(query, params)
-    return cursor.fetchall()
+    followers = cursor.fetchall()
+    return val_list(followers, 'follower')
 
 
 def get_following_list(cursor, email):
@@ -29,7 +30,8 @@ def get_following_list(cursor, email):
             '''
     params = (email,)
     cursor.execute(query, params)
-    return cursor.fetchall()
+    followees = cursor.fetchall()
+    return val_list(followees, 'followee')
 
 
 def get_user_subs(cursor, email):
@@ -39,7 +41,8 @@ def get_user_subs(cursor, email):
             '''
     params = (email,)
     cursor.execute(query, params)
-    return cursor.fetchall()
+    subs = cursor.fetchall()
+    return val_list(subs, 'thread')
 
 
 def complete_user(cursor, user):
