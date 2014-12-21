@@ -3,6 +3,7 @@ __author__ = 'max'
 from queries.utils import WrongType, WrongValue, NotFound, optional
 from flask import jsonify, make_response, request
 from mysql.connector.errors import OperationalError as FailedConstraint
+from mysql.connector.pooling import MySQLConnectionPool
 import mysql.connector
 
 dbconfig = {
@@ -12,7 +13,8 @@ dbconfig = {
     'database': 'forum_db'
 }
 
-connection = mysql.connector.connect(**dbconfig)
+pool = MySQLConnectionPool(pool_name="mypool", pool_size=10, **dbconfig)
+# connection = mysql.connector.connect(**dbconfig)
 
 # codes of response
 OK = 0
@@ -39,8 +41,9 @@ class exceptions():
         self.__name__ = function.__name__
 
     def __call__(self):
+        connect = pool.get_connection()
         try:
-            return self.function(connection)
+            return self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:
             return response_error(INVALID_QUERY, e.msg)
@@ -53,6 +56,9 @@ class exceptions():
 
         except Exception as e:
             return response_error(UNKNOWN, e.message)
+
+        finally:
+            connect.close()
 
 
 def extract_opt(store, args):
