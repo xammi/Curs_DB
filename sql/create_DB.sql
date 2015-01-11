@@ -13,7 +13,7 @@ CREATE TABLE `User`(
 
 	PRIMARY KEY (`id`),
     UNIQUE KEY USING HASH (`email`)
-);
+) ENGINE = MYISAM;
 
 
 CREATE TABLE `Forum`(
@@ -27,7 +27,7 @@ CREATE TABLE `Forum`(
     UNIQUE KEY USING HASH (`name`),
     KEY USING HASH (`user`),
     CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE
-);
+) ENGINE = MYISAM;
 
 
 CREATE TABLE `Thread` (
@@ -53,7 +53,7 @@ CREATE TABLE `Thread` (
     CONSTRAINT FOREIGN KEY (`forum`) REFERENCES `Forum` (`short_name`) ON DELETE CASCADE,
     KEY USING HASH (`user`),
     CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE
-);
+) ENGINE = MYISAM;
 
 CREATE TABLE `Post` (
 	`id` INT NOT NULL AUTO_INCREMENT,	
@@ -83,7 +83,7 @@ CREATE TABLE `Post` (
     CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY (`thread`),
     CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`) ON DELETE CASCADE
-);
+) ENGINE = MYISAM;
 
 DROP TRIGGER IF EXISTS ins_post;
 CREATE TRIGGER ins_post
@@ -103,7 +103,7 @@ CREATE TABLE `Follow` (
     CONSTRAINT FOREIGN KEY (`follower`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY USING HASH (`followee`),
     CONSTRAINT FOREIGN KEY (`followee`) REFERENCES `User` (`email`) ON DELETE CASCADE
-);
+) ENGINE = MYISAM;
 
 CREATE TABLE `Subscribe` (
     `id` INT NOT NULL AUTO_INCREMENT,
@@ -115,4 +115,4 @@ CREATE TABLE `Subscribe` (
     CONSTRAINT FOREIGN KEY (`user`) REFERENCES `User` (`email`) ON DELETE CASCADE,
     KEY (`thread`),
     CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`) ON DELETE CASCADE
-);
+) ENGINE = MYISAM;
