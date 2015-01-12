@@ -94,8 +94,8 @@ def get_forum_users(cursor, forum, limit, order, since_id):
         params = (since_id, forum)
 
     query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
-               FROM `Post`
-               LEFT JOIN `User` ON `User`.`email` = `Post`.`user`
+               FROM `User`
+               JOIN `Post` ON  `Post`.`user` = `User`.`email`
                WHERE {0} `forum` = %s
                ORDER BY `User`.`name` {1}
                {2};
