@@ -13,7 +13,7 @@ dbconfig = {
     'database': 'forum_db'
 }
 
-pool = MySQLConnectionPool(pool_name="mypool", pool_size=32, **dbconfig)
+pool = MySQLConnectionPool(pool_name="mypool", pool_size=10, **dbconfig)
 # connection = mysql.connector.connect(**dbconfig)
 
 # codes of response

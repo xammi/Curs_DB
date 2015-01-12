@@ -87,14 +87,14 @@ def get_forum_users(cursor, forum, limit, order, since_id):
     limit = prepare_limit(limit)
 
     query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
-               FROM `User`
-               JOIN `Post` ON `User`.`email` = `Post`.`user`
-               WHERE `forum` = %s AND `User`.`id` >= %s
+               FROM `Post`
+               JOIN `User` ON `User`.`email` = `Post`.`user`
+               WHERE `User`.`id` >= %s AND `forum` = %s
                ORDER BY `User`.`name` {0}
                {1};
                '''.format(order, limit)
 
-    params = (forum, since_id)
+    params = (since_id, forum)
     cursor.execute(query, params)
 
     users = cursor.fetchall()
