@@ -93,13 +93,21 @@ def get_forum_users(cursor, forum, limit, order, since_id):
         user_id_clause = "`User`.`id` >= %s AND"
         params = (since_id, forum)
 
-    query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
-               FROM `User`
-               JOIN `Post` ON  `Post`.`user` = `User`.`email`
-               WHERE {0} `forum` = %s
-               ORDER BY `User`.`name` {1}
-               {2};
-               '''.format(user_id_clause, order, limit)
+    query = '''SELECT * FROM `User`
+               WHERE {0} EXISTS (
+                   SELECT * FROM `Post`
+                   WHERE `forum` = %s
+                   AND `user` = `User`.`email`
+               ) ORDER BY `User`.`name` {1}
+               {2};'''.format(user_id_clause, order, limit)
+
+    # query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
+    #            FROM `User`
+    #            JOIN `Post` ON  `Post`.`user` = `User`.`email`
+    #            WHERE {0} `forum` = %s
+    #            ORDER BY `User`.`name` {1}
+    #            {2};
+    #            '''.format(user_id_clause, order, limit)
 
     cursor.execute(query, params)
 
