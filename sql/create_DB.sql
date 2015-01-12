@@ -116,3 +116,5 @@ CREATE TABLE `Subscribe` (
     KEY (`thread`),
     CONSTRAINT FOREIGN KEY (`thread`) REFERENCES `Thread` (`id`) ON DELETE CASCADE
 ) ENGINE = MYISAM;
+
+ALTER TABLE `Post` ADD INDEX idx_post_fu (`forum`, `user`);

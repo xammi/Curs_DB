@@ -86,7 +86,7 @@ def get_forum_users(cursor, forum, limit, order, since_id):
     since_id = to_number(since_id, 'since_id')
     limit = prepare_limit(limit)
 
-    query = '''SELECT User.id, username, email, about, isAnonymous, name
+    query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
                FROM `User`
                JOIN `Post` ON `User`.`email` = `Post`.`user`
                WHERE `forum` = %s AND `User`.`id` >= %s
