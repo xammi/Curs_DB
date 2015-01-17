@@ -94,12 +94,19 @@ def get_forum_users(cursor, forum, limit, order, since_id):
         params = (since_id, forum)
 
     query = '''SELECT * FROM `User`
-               WHERE {0} EXISTS (
-                   SELECT * FROM `Post`
+               WHERE {0} `email` IN (
+                   SELECT DISTINCT `user` FROM `Post`
                    WHERE `forum` = %s
-                   AND `user` = `User`.`email`
                ) ORDER BY `User`.`name` {1}
                {2};'''.format(user_id_clause, order, limit)
+
+    # query = '''SELECT * FROM `User`
+    #            WHERE {0} EXISTS (
+    #                SELECT * FROM `Post`
+    #                WHERE `forum` = %s
+    #                AND `user` = `User`.`email`
+    #            ) ORDER BY `User`.`name` {1}
+    #            {2};'''.format(user_id_clause, order, limit)
 
     # query = '''SELECT DISTINCT User.id, username, email, about, isAnonymous, name
     #            FROM `User`
