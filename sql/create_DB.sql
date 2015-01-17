@@ -12,7 +12,8 @@ CREATE TABLE `User`(
 	`isAnonymous` BOOL NOT NULL DEFAULT False,
 
 	PRIMARY KEY (`id`),
-    UNIQUE KEY USING HASH (`email`)
+    UNIQUE KEY USING HASH (`email`),
+    KEY USING HASH (`name`)
 ) ENGINE = MYISAM;
 
 
