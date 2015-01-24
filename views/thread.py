@@ -21,6 +21,7 @@ def thread_close(connect):
 
     set_thread_closed(cursor, thread, 'True')
     connect.commit()
+    cursor.close()
     return response_ok({'thread': thread})
 
 
@@ -39,6 +40,7 @@ def thread_create(connect):
     connect.commit()
 
     thread['id'] = thread_id
+    cursor.close()
     return response_ok(thread)
 
 
@@ -59,6 +61,7 @@ def thread_details(connect):
     if 'forum' in related:
         thread['forum'] = get_forum_by_slug(cursor, thread['forum'])
 
+    cursor.close()
     return response_ok(thread)
 
 
@@ -79,6 +82,7 @@ def thread_list(connect):
     elif not forum is None:
         threads = get_forum_threads(cursor, forum, since, limit, order)
 
+    cursor.close()
     return response_ok(threads)
 
 
@@ -94,6 +98,7 @@ def thread_list_posts(connect):
 
     posts = get_thread_posts(cursor, thread, since, limit, sort, order)
 
+    cursor.close()
     return response_ok(posts)
 
 
@@ -107,6 +112,7 @@ def thread_open(connect):
 
     set_thread_closed(cursor, thread, 'False')
     connect.commit()
+    cursor.close()
     return response_ok({'thread': thread})
 
 
@@ -120,6 +126,7 @@ def thread_remove(connect):
 
     set_thread_deleted(cursor, thread, 'True')
     connect.commit()
+    cursor.close()
     return response_ok({'thread': thread})
 
 
@@ -133,6 +140,7 @@ def thread_restore(connect):
 
     set_thread_deleted(cursor, thread, 'False')
     connect.commit()
+    cursor.close()
     return response_ok({'thread': thread})
 
 
@@ -148,6 +156,7 @@ def thread_subscribe(connect):
     connect.commit()
 
     subs = {'thread': thread, 'user': user}
+    cursor.close()
     return response_ok(subs)
 
 
@@ -163,6 +172,7 @@ def thread_unsubscribe(connect):
     connect.commit()
 
     subs = {'thread': thread, 'user': user}
+    cursor.close()
     return response_ok(subs)
 
 
@@ -178,6 +188,7 @@ def thread_update(connect):
     connect.commit()
 
     thread = get_thread_by_id(cursor, thread)
+    cursor.close()
     return response_ok(thread)
 
 
@@ -193,4 +204,5 @@ def thread_vote(connect):
     connect.commit()
 
     thread = get_thread_by_id(cursor, thread)
+    cursor.close()
     return response_ok(thread)

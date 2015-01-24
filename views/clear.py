@@ -16,4 +16,5 @@ def clear(connect):
 
     clear_all(cursor)
     connect.commit()
+    cursor.close()
     return response_ok("OK")

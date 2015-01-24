@@ -27,6 +27,7 @@ def forum_create(connect):
 
     forum_id = cursor.lastrowid
     forum = get_forum_pattern(forum_id, name, short_name, user)
+    cursor.close()
     return response_ok(forum)
 
 
@@ -44,6 +45,7 @@ def forum_details(connect):
         user = get_user_by_email(cursor, forum['user'])
         forum.update({'user': user})
 
+    cursor.close()
     return response_ok(forum)
 
 
@@ -72,6 +74,7 @@ def forum_posts(connect):
         if 'thread' in related:
             post['thread'] = get_thread_by_id(cursor, post['thread'])
 
+    cursor.close()
     return response_ok(posts)
 
 
@@ -97,6 +100,7 @@ def forum_threads(connect):
         if 'forum' in related:
             thread['forum'] = forum
 
+    cursor.close()
     return response_ok(threads)
 
 
@@ -114,4 +118,5 @@ def forum_users(connect):
     for user in users:
         complete_user(cursor, user)
 
+    cursor.close()
     return response_ok(users)

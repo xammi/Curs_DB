@@ -31,6 +31,7 @@ def post_create(connect):
 
     post['id'] = post_id
     #post_orig = get_post_by_id(cursor, post_id)
+    cursor.close()
     return response_ok(post)
 
 
@@ -54,6 +55,7 @@ def post_details(connect):
     if 'thread' in related:
         post['thread'] = get_thread_by_id(cursor, post['thread'])
 
+    cursor.close()
     return response_ok(post)
 
 
@@ -74,6 +76,7 @@ def post_list(connect):
     elif not thread is None:
         posts = get_thread_posts(cursor, thread, since, limit, sort, order)
 
+    cursor.close()
     return response_ok(posts)
 
 
@@ -86,6 +89,7 @@ def post_remove(connect):
 
     set_post_deleted(cursor, post, 'True')
     connect.commit()
+    cursor.close()
     return response_ok({'post': post})
 
 
@@ -98,6 +102,7 @@ def post_restore(connect):
 
     set_post_deleted(cursor, post, 'False')
     connect.commit()
+    cursor.close()
     return response_ok({'post': post})
 
 
@@ -112,6 +117,7 @@ def post_update(connect):
     connect.commit()
 
     post = get_post_by_id(cursor, post)
+    cursor.close()
     return response_ok(post)
 
 
@@ -126,4 +132,5 @@ def post_vote(connect):
     connect.commit()
 
     post = get_post_by_id(cursor, post)
+    cursor.close()
     return response_ok(post)

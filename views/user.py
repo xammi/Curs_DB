@@ -35,6 +35,7 @@ def user_create(connect):
 
     user_id = cursor.lastrowid
     user = get_user_pattern(user_id, username, about, name, email, is_anonymous)
+    cursor.close()
     return response_ok(user)
 
 
@@ -47,6 +48,7 @@ def user_details(connect):
     user = extract_req(request.args, req_args)
 
     user = get_user_by_email(cursor, user)
+    cursor.close()
     return response_ok(user)
 
 
@@ -62,6 +64,7 @@ def user_follow(connect):
     connect.commit()
 
     user = get_user_by_email(cursor, follower)
+    cursor.close()
     return response_ok(user)
 
 
@@ -79,6 +82,7 @@ def user_list_followers(connect):
     for follower in followers:
         complete_user(cursor, follower)
 
+    cursor.close()
     return response_ok(followers)
 
 
@@ -96,6 +100,7 @@ def user_list_following(connect):
     for follower in followees:
         complete_user(cursor, follower)
 
+    cursor.close()
     return response_ok(followees)
 
 
@@ -111,6 +116,7 @@ def user_list_posts(connect):
 
     posts = get_user_posts(cursor, user, since, limit, sort, order)
 
+    cursor.close()
     return response_ok(posts)
 
 
@@ -126,6 +132,7 @@ def user_unfollow(connect):
     connect.commit()
 
     user = get_user_by_email(cursor, follower)
+    cursor.close()
     return response_ok(user)
 
 
@@ -141,4 +148,5 @@ def user_update_profile(connect):
     connect.commit()
 
     user = get_user_by_email(cursor, user)
+    cursor.close()
     return response_ok(user)
