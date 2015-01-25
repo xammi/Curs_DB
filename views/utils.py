@@ -42,23 +42,27 @@ class exceptions():
 
     def __call__(self):
         connect = pool.get_connection()
+        
         try:
-            return self.function(connect)
+            res = self.function(connect)
 
         except (RequiredNone, WrongType, WrongValue) as e:
-            return response_error(INVALID_QUERY, e.msg)
+            res = response_error(INVALID_QUERY, e.msg)
 
         except (FailedConstraint, WrongRelated) as e:
-            return response_error(UNCORRECT_QUERY, e.msg)
+            res = response_error(UNCORRECT_QUERY, e.msg)
 
         except NotFound as e:
-            return response_error(QUIRED_NOT_FOUND, e.msg)
+            res = response_error(QUIRED_NOT_FOUND, e.msg)
 
         except Exception as e:
-            return response_error(UNKNOWN, e.message)
+            res = response_error(UNKNOWN, e.message)
 
-        finally:
-            connect.close()
+        # while not connect.is_connected():
+        #    pass
+
+        connect.close()
+        return res
 
 
 def extract_opt(store, args):
